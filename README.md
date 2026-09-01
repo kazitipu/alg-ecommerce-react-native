@@ -4,6 +4,35 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
+## Prerequisite: Firebase config
+
+`android/app/google-services.json` is **not** in this repository — it is
+gitignored, so a fresh clone will not build until you supply your own copy. The
+Android build applies the `com.google.gms.google-services` plugin, which reads
+that file at compile time and fails without it.
+
+Download it from the [Firebase console](https://console.firebase.google.com/)
+for project `alg-ecommerce-a9a51`, under **Project settings → Your apps →
+Android app `com.alglimited.ecommerce`**, and drop it at:
+
+```
+android/app/google-services.json
+```
+
+Or, with the [Firebase CLI](https://firebase.google.com/docs/cli):
+
+```sh
+firebase apps:sdkconfig android --project alg-ecommerce-a9a51 > android/app/google-services.json
+```
+
+The package name in the file must match the `applicationId` in
+`android/app/build.gradle` (`com.alglimited.ecommerce`), or Google Sign-In and
+push notifications will fail at runtime even though the build succeeds.
+
+> iOS does not need `GoogleService-Info.plist` yet — the native Firebase SDK is
+> only wired up on Android. Add the plist to the Xcode project at the point iOS
+> Firebase support lands.
+
 ## Step 1: Start Metro
 
 First, you will need to run **Metro**, the JavaScript build tool for React Native.
