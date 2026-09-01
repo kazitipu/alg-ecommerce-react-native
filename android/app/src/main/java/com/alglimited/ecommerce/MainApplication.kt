@@ -1,4 +1,4 @@
-package com.algecommerce
+package com.alglimited.ecommerce
 
 import android.app.Application
 import com.facebook.react.PackageList

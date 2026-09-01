@@ -1,4 +1,4 @@
-package com.algecommerce
+package com.alglimited.ecommerce
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

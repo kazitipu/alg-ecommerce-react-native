@@ -2,6 +2,20 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+      Required from API 33. Without it the OS silently drops every notification,
+      so order-status pushes would never appear on Android 13+.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Saving product photos. From API 29 scoped storage handles this without a
+      permission, so the grant is capped at API 28 for older devices only.
+    -->
+    <uses-permission
+      android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+      android:maxSdkVersion="28" />
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
@@ -21,6 +35,35 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+
+        <!--
+          Deep links. These must match the prefixes in src/navigation/linking.js,
+          otherwise Android never hands the URL to the app and the config there
+          does nothing.
+        -->
+
+        <!-- Custom scheme: alg://product/123 -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="alg" />
+        </intent-filter>
+
+        <!--
+          Website links, so an existing alg.com.bd URL opens the app.
+          `autoVerify` needs /.well-known/assetlinks.json published on the
+          domain with this app's package name and signing certificate
+          fingerprint; until that is served, Android falls back to showing a
+          chooser rather than opening the app directly.
+        -->
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="alg.com.bd" />
+            <data android:scheme="https" android:host="www.alg.com.bd" />
         </intent-filter>
       </activity>
     </application>
