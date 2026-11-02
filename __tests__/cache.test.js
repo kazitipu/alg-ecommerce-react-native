@@ -86,3 +86,27 @@ describe('clearCache', () => {
     expect(getCache('b')).toBeUndefined();
   });
 });
+
+describe('retrying flaky requests', () => {
+   
+  const { withRetry } = require('../src/utils/cache');
+
+  it('succeeds on a later attempt', async () => {
+    let calls = 0;
+    const loader = jest.fn(async () => {
+      calls += 1;
+      if (calls < 3) throw new Error('500');
+      return 'page';
+    });
+    await expect(withRetry(loader, { retries: 2, delayMs: 1 })).resolves.toBe('page');
+    expect(loader).toHaveBeenCalledTimes(3);
+  });
+
+  it('gives up after the last retry', async () => {
+    const loader = jest.fn(async () => {
+      throw new Error('down');
+    });
+    await expect(withRetry(loader, { retries: 1, delayMs: 1 })).rejects.toThrow('down');
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
+});

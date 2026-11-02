@@ -15,6 +15,7 @@ const MODAL_SCREENS = [
   ROUTES.LOGIN,
   ROUTES.REGISTER,
   ROUTES.FORGOT_PASSWORD,
+  ROUTES.PHONE_LOGIN,
   ROUTES.OTP_VERIFY,
   ROUTES.PAYMENT_SHEET,
   ROUTES.PAYMENT_WEBVIEW,
@@ -42,7 +43,7 @@ const RootNavigator = () => (
             name={name}
             component={SCREENS[name].component}
             initialParams={SCREENS[name].initialParams}
-            options={{ title: SCREENS[name].title }}
+            options={{ title: SCREENS[name].title, ...SCREENS[name].options }}
           />
         ))}
       </Stack.Group>

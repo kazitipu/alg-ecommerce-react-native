@@ -98,6 +98,20 @@ jest.mock('react-native-webview', () => {
   return { __esModule: true, WebView: View, default: View };
 });
 
+// The carousel imports react-native-worklets directly, which needs the native
+// runtime; render the first slide so the layout around it can be asserted on.
+jest.mock('react-native-reanimated-carousel', () => {
+  const { View } = require('react-native');
+  const Carousel = ({ data, renderItem }) =>
+    data?.length ? <View>{renderItem({ item: data[0], index: 0 })}</View> : null;
+  return { __esModule: true, Carousel };
+});
+
+jest.mock('react-native-video', () => {
+  const { View } = require('react-native');
+  return { __esModule: true, default: View };
+});
+
 jest.mock('react-native-image-picker', () => ({
   __esModule: true,
   launchImageLibrary: jest.fn().mockResolvedValue({ didCancel: true }),
@@ -106,7 +120,7 @@ jest.mock('react-native-image-picker', () => ({
 
 jest.mock('react-native-html-to-pdf', () => ({
   __esModule: true,
-  default: { convert: jest.fn().mockResolvedValue({ filePath: '/tmp/invoice.pdf' }) },
+  generatePDF: jest.fn().mockResolvedValue({ filePath: '/tmp/invoice.pdf' }),
 }));
 
 jest.mock('react-native-share', () => ({
@@ -143,7 +157,12 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
 jest.mock('react-native-blob-util', () => ({
   __esModule: true,
   default: {
-    fs: { dirs: { DownloadDir: '/downloads', DocumentDir: '/documents' } },
+    fs: {
+      dirs: { DownloadDir: '/downloads', DocumentDir: '/documents' },
+      exists: jest.fn().mockResolvedValue(false),
+      unlink: jest.fn().mockResolvedValue(undefined),
+      mv: jest.fn().mockResolvedValue(true),
+    },
     config: jest.fn(() => ({ fetch: jest.fn().mockResolvedValue({}) })),
   },
 }));

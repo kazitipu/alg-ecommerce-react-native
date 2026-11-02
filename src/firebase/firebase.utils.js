@@ -38,6 +38,7 @@ export {
   removeAllCartItemFromFirestore,
   removeCartItemFromFirestore,
   removeItemFromCart,
+  updateCartLocalShipping,
   updateCartSkuQuantity,
 } from './cart';
 
@@ -51,7 +52,6 @@ export {
   get1688Category,
   getAllBanners,
   getAllCampaigns,
-  getAllD2DRates,
   getAllFirestoreAliProductsList,
   getAllFirestoreProducts,
   getAllHomeCategory,
@@ -75,19 +75,11 @@ export {
 } from './orders';
 
 export {
-  deleteShipForMeList,
   getAllBookingsOfSingleUser,
-  getAllShipForMeList,
-  getAllShipForMeOfSingleUser,
+  getAllD2DRates,
   getSingleProductRequest,
-  getSingleShipForMe,
   setProductRequest,
-  setShipForMe,
   updateMultipleProductRequest,
-  updateShipForMe,
-  updateShipForMeList,
-  updateShipmentRequest,
-  uploadShipForMeList,
 } from './freight';
 
 export {
@@ -97,13 +89,13 @@ export {
   uploadPaymentRequestApi,
   uploadPaymentRequestApi2,
   uploadRefundApply,
-  uploadShipmentPaymentRequest,
 } from './payments';
 
 export {
   uploadImage,
   uploadImageProduct,
   uploadImageRechargeRequest,
+  uploadProfileImage,
 } from './uploads';
 
 export { sendOtp, verifyOtp } from './otp';

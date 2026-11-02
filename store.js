@@ -16,7 +16,7 @@ import rootReducer from './src/reducers';
  *  - user  renders the profile header immediately, ahead of onAuthStateChanged
  *
  * Everything else (`data`, `searchedProducts`, `singleProduct`, `orders`,
- * `bookingRequests`, `shipForMeList`, `notices`, `filters`) is server data and
+ * `bookingRequests`, `notices`, `filters`) is server data and
  * is deliberately left out so stale results never outlive a session.
  */
 const persistConfig = {

@@ -6,7 +6,7 @@ test('root reducer composes and holds the expected slices', () => {
   const state = store.getState();
   expect(Object.keys(state).sort()).toEqual([
     'bookingRequests', 'cartList', 'compare', 'data', 'filters', 'notices',
-    'orders', 'searchedProducts', 'shipForMeList', 'singleProduct', 'user', 'wishlist',
+    'orders', 'searchedProducts', 'singleProduct', 'user', 'wishlist',
   ]);
   expect(state.data.symbol).toBe('Tk');
   expect(state.cartList.cart).toEqual([]);

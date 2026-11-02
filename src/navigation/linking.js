@@ -48,7 +48,6 @@ export const linking = {
               [ROUTES.NOTICE_DETAIL]: 'pages/notices/:noticeId',
               [ROUTES.TRACK_ORDER]: 'pages/track-order',
               [ROUTES.BUY_FOR_ME]: 'pages/buy-for-me',
-              [ROUTES.SHIP_FOR_ME]: 'pages/ship-for-me',
               [ROUTES.REQUEST_PRODUCT]: 'pages/request-for-product',
               [ROUTES.ABOUT_US]: 'pages/about-us',
               [ROUTES.FAQ]: 'pages/faq',

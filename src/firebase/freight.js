@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -15,11 +14,10 @@ import { notifyError } from '../utils/notify';
 import { generateBookingId } from '../utils/ids';
 
 /**
- * The two freight services:
- *
- *  - `bookingRequest`  "Buy & Ship for me" — ALG purchases the goods for the customer
- *  - `shipForMe`       "Ship for me"       — the customer bought them; ALG only forwards
- *  - `shipForMeList`   the draft parcel list built up before a ship-for-me booking is sent
+ * Freight bookings: `bookingRequest` holds "Buy & Ship for me" requests, where
+ * ALG purchases the goods for the customer. (The "Ship for me" forwarding
+ * service and its `shipForMe` / `shipForMeList` collections are no longer
+ * offered, matching the website.)
  */
 
 const docsToArray = snapshot => {
@@ -81,6 +79,20 @@ export const getSingleProductRequest = async id => {
   }
 };
 
+/**
+ * Door-to-door shipping rates for one origin country (`d2d-rates-air-china`
+ * etc.): each document is a product type (`id`) with its per-kg rate for 5 kg
+ * and over (`eleven`). The request form lists them as the web does.
+ */
+export const getAllD2DRates = async (freightType, country) => {
+  try {
+    return docsToArray(await getDocs(collection(db, `d2d-rates-${freightType}-${country}`)));
+  } catch (error) {
+    notifyError(error);
+    return [];
+  }
+};
+
 export const getAllBookingsOfSingleUser = userId =>
   listByUser('bookingRequest', userId);
 
@@ -99,116 +111,3 @@ export const updateMultipleProductRequest = async productReqArray => {
     return [];
   }
 };
-
-// --- Ship for me -------------------------------------------------------------
-
-export const setShipForMe = async bookingObj => {
-  const bookingRef = doc(db, `shipForMe/${bookingObj.bookingId}`);
-  const snapShot = await getDoc(bookingRef);
-
-  if (snapShot.exists()) {
-    notifyError('There is already a booking with a similar id, please try again.');
-    return undefined;
-  }
-
-  try {
-    await setDoc(bookingRef, withoutFile(bookingObj));
-    const stored = await getDoc(bookingRef);
-    return stored.data();
-  } catch (error) {
-    notifyError(error);
-    return undefined;
-  }
-};
-
-export const updateShipForMe = async bookingObj => {
-  const bookingRef = doc(db, `shipForMe/${bookingObj.bookingId}`);
-  const snapShot = await getDoc(bookingRef);
-
-  try {
-    await updateDoc(bookingRef, { ...snapShot.data(), ...withoutFile(bookingObj) });
-    const stored = await getDoc(bookingRef);
-    return stored.data();
-  } catch (error) {
-    notifyError(error);
-    return undefined;
-  }
-};
-
-export const getSingleShipForMe = async bookingId => {
-  try {
-    const snapshot = await getDoc(doc(db, `shipForMe/${bookingId}`));
-    return snapshot.data();
-  } catch (error) {
-    notifyError(error);
-    return undefined;
-  }
-};
-
-export const getAllShipForMeOfSingleUser = userId => listByUser('shipForMe', userId);
-
-export const updateShipmentRequest = async requestObj => {
-  try {
-    const requestRef = doc(db, `shipForMe/${requestObj.bookingId}`);
-    await updateDoc(requestRef, { ...requestObj });
-    const stored = await getDoc(requestRef);
-    return stored.data();
-  } catch (error) {
-    notifyError(error);
-    return undefined;
-  }
-};
-
-// --- Ship-for-me draft list --------------------------------------------------
-
-export const uploadShipForMeList = async bookingObj => {
-  const bookingId = generateBookingId();
-  const bookingRef = doc(db, `shipForMeList/${bookingId}`);
-  const snapShot = await getDoc(bookingRef);
-
-  if (snapShot.exists()) {
-    notifyError('There is already a booking with a similar id, please try again.');
-    return undefined;
-  }
-
-  try {
-    await setDoc(bookingRef, { bookingId, ...withoutFile(bookingObj) });
-    const stored = await getDoc(bookingRef);
-    return stored.data();
-  } catch (error) {
-    notifyError(error);
-    return undefined;
-  }
-};
-
-export const updateShipForMeList = async bookingObj => {
-  const bookingRef = doc(db, `shipForMeList/${bookingObj.bookingId}`);
-  const snapShot = await getDoc(bookingRef);
-
-  if (!snapShot.exists()) {
-    notifyError('That parcel could not be found. Please try again.');
-    return undefined;
-  }
-
-  try {
-    const { bookingObj: nested, ...rest } = bookingObj;
-    await updateDoc(bookingRef, rest);
-    const stored = await getDoc(bookingRef);
-    return stored.data();
-  } catch (error) {
-    notifyError(error);
-    return undefined;
-  }
-};
-
-export const deleteShipForMeList = async bookingObj => {
-  try {
-    await deleteDoc(doc(db, `shipForMeList/${bookingObj.bookingId}`));
-  } catch (error) {
-    notifyError(error);
-  }
-};
-
-/** Draft parcels are shown in entry order, not newest-first. */
-export const getAllShipForMeList = userId =>
-  listByUser('shipForMeList', userId, { sorted: false });

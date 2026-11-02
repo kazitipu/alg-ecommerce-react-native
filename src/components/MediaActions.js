@@ -3,7 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Icon from '@react-native-vector-icons/ionicons';
 import Share from 'react-native-share';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { saveProductPhotos } from '../utils/savePhotos';
 
 import { notifyError, notifySuccess } from '../utils/notify';
 import { colors, radius, spacing, typography } from '../theme';
@@ -14,13 +14,15 @@ import { colors, radius, spacing, typography } from '../theme';
  * The web version (`productMediaActions.jsx`) streamed each file with `fetch`
  * and a `ReadableStream` reader to drive a progress bar, then saved it with a
  * synthetic `<a download>` click — all browser-only. Here the native share
- * sheet handles sharing, and downloads go through the file system directly.
+ * sheet handles sharing, and photos are saved to the gallery (see `utils/savePhotos`).
  */
 const MediaActions = ({ product, images = [] }) => {
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(null);
 
-  const productUrl =
-    product?.detail_url || `https://alg.com.bd/product/${product?.id || ''}`;
+  // Always the ALG product page, as the web shares `window.location.href` —
+  // never the supplier's 1688 `detail_url`.
+  const productUrl = `https://alg.com.bd/product/${product?.id || ''}`;
 
   const copyLink = () => {
     Clipboard.setString(productUrl);
@@ -41,10 +43,15 @@ const MediaActions = ({ product, images = [] }) => {
 
   const shareOnWhatsApp = () =>
     Linking.openURL(
-      `https://wa.me/?text=${encodeURIComponent(`${product?.name || ''} ${productUrl}`)}`,
+      `https://wa.me/?text=${encodeURIComponent(`${product?.name || ''}\n${productUrl}`)}`,
     );
 
-  /** Downloads every photo into the device's own storage. */
+  const shareOnFacebook = () =>
+    Linking.openURL(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`,
+    );
+
+  /** Saves every photo to the phone's gallery (an "ALG" album). */
   const saveImages = async () => {
     if (images.length === 0) {
       notifyError('There are no photos to save.');
@@ -52,25 +59,27 @@ const MediaActions = ({ product, images = [] }) => {
     }
 
     setSaving(true);
+    setProgress({ done: 0, total: images.length });
     try {
-      const { dirs } = ReactNativeBlobUtil.fs;
-      const directory = dirs.DownloadDir || dirs.DocumentDir;
-
-      for (let index = 0; index < images.length; index++) {
-        await ReactNativeBlobUtil.config({
-          fileCache: true,
-          path: `${directory}/alg-${product?.id || 'product'}-${index + 1}.jpg`,
-        }).fetch('GET', images[index]);
+      const result = await saveProductPhotos(images, {
+        productId: product?.id || 'product',
+        onProgress: (done, total) => setProgress({ done, total }),
+      });
+      if (result.denied) {
+        notifyError('Allow storage access to save photos.');
+      } else if (result.saved > 0) {
+        notifySuccess(
+          `Saved ${result.saved} photo${result.saved > 1 ? 's' : ''}`,
+          result.failed ? `${result.failed} could not be downloaded` : 'Find them in your gallery, in the ALG album.',
+        );
+      } else if (!result.cancelled) {
+        notifyError('The photos could not be downloaded. Please try again.');
       }
-
-      notifySuccess(
-        `Saved ${images.length} photo${images.length > 1 ? 's' : ''}`,
-        directory,
-      );
     } catch (error) {
       notifyError(error, 'Could not save the photos.');
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   };
 
@@ -78,10 +87,11 @@ const MediaActions = ({ product, images = [] }) => {
     <View style={styles.container}>
       <ActionButton icon="link-outline" label="Copy link" onPress={copyLink} />
       <ActionButton icon="share-social-outline" label="Share" onPress={shareProduct} />
+      <ActionButton icon="logo-facebook" label="Facebook" onPress={shareOnFacebook} />
       <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={shareOnWhatsApp} />
       <ActionButton
         icon="download-outline"
-        label={saving ? 'Saving…' : 'Save photos'}
+        label={saving ? (progress ? `Saving ${progress.done}/${progress.total}…` : 'Saving…') : 'Save photos'}
         onPress={saving ? undefined : saveImages}
       />
     </View>

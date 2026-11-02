@@ -9,12 +9,25 @@ import { addCartItemTofirestore } from './cart';
  * `price_range` and `videos` are blanked on write because both can be large and
  * the wishlist only ever renders a thumbnail, a name and a price.
  */
-export const addWishlistTofirestore = async (userAuth, product) => {
-  if (!userAuth) return;
+/**
+ * The wishlist document belongs to the Firebase auth uid, which is also the
+ * profile document's id — the app's `currentUser` carries it as `id` (and
+ * sometimes `uid`), so either is accepted.
+ */
+const wishlistKey = userAuth => userAuth?.uid || userAuth?.id;
 
-  const wishlistRef = doc(db, `wishlists/${userAuth.uid}`);
+export const addWishlistTofirestore = async (userAuth, product) => {
+  if (!wishlistKey(userAuth)) return;
+
+  const wishlistRef = doc(db, `wishlists/${wishlistKey(userAuth)}`);
   const snapShot = await getDoc(wishlistRef);
-  const entry = { ...product, price_range: '', videos: '' };
+  // Null and undefined fields are dropped, as the web does — Firestore rejects
+  // undefined values.
+  const entry = Object.fromEntries(
+    Object.entries({ ...product, price_range: '', videos: '' }).filter(
+      ([, value]) => value !== null && value !== undefined,
+    ),
+  );
 
   if (!snapShot.exists()) {
     await setDoc(wishlistRef, { wishlist: [entry] });
@@ -27,15 +40,17 @@ export const addWishlistTofirestore = async (userAuth, product) => {
   await updateDoc(wishlistRef, { wishlist: [...wishlist, entry] });
 };
 
+/** Removes a product from `wishlists/{uid}`; throws when there is no signed-in account. */
 export const removeFromWishlistFirestore = async (userAuth, product) => {
-  if (!userAuth) return;
+  const key = wishlistKey(userAuth);
+  if (!key) throw new Error('Please sign in to change your wishlist.');
 
-  const wishlistRef = doc(db, `wishlists/${userAuth.uid}`);
+  const wishlistRef = doc(db, `wishlists/${key}`);
   const snapShot = await getDoc(wishlistRef);
   if (!snapShot.exists()) return;
 
   await updateDoc(wishlistRef, {
-    wishlist: snapShot.data().wishlist.filter(item => item.id !== product.id),
+    wishlist: (snapShot.data().wishlist || []).filter(item => item?.id !== product.id),
   });
 };
 

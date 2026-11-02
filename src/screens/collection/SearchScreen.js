@@ -12,7 +12,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
 import { Screen } from '../../components';
-import { uploadSearchImage } from '../../api';
+import { SEARCH_PHOTO_OPTIONS, uploadSearchImage } from '../../api';
 import { resolveSearchInput } from '../../utils/productLink';
 import { notifyError } from '../../utils/notify';
 import { HOME_CATEGORIES } from '../../constants/categories';
@@ -55,11 +55,7 @@ const SearchScreen = () => {
 
   /** Uploads a photo, then searches 1688 by the returned image id. */
   const searchByPhoto = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.8,
-      selectionLimit: 1,
-    });
+    const result = await launchImageLibrary(SEARCH_PHOTO_OPTIONS);
 
     if (result.didCancel) return;
     const asset = result.assets?.[0];
@@ -70,13 +66,12 @@ const SearchScreen = () => {
 
     setUploading(true);
     try {
-      const data = await uploadSearchImage(asset);
-      const imgId = data?.imgId || data?.imageUrl || data;
+      const imgId = await uploadSearchImage(asset);
       if (!imgId) {
         notifyError('The photo could not be processed. Try another one.');
         return;
       }
-      navigation.navigate(ROUTES.COLLECTION, { imgId, title: 'Photo search' });
+      navigation.navigate(ROUTES.COLLECTION, { imgId, imageUri: asset.uri, title: 'Photo search' });
     } catch (error) {
       notifyError(error, 'Image search failed. Please try again.');
     } finally {

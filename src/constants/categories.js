@@ -3,24 +3,24 @@
  *
  * `name` doubles as the search keyword sent to `/api/products/search`, which is
  * how the web app worked — tapping a tile searches 1688 for that term.
- * `icon` names an Ionicons glyph, standing in for the web's PNG tiles so the
- * app ships no extra image assets for these.
+ * `image` is the web's PNG tile, used by the home screen; `icon` names an
+ * Ionicons glyph for compact lists such as the search screen's suggestions.
  */
 export const HOME_CATEGORIES = [
-  { name: 'Bags', icon: 'bag-handle' },
-  { name: 'Shoes', icon: 'footsteps' },
-  { name: 'Jewelry', icon: 'diamond' },
-  { name: 'Beauty Products', icon: 'color-palette' },
-  { name: 'Mens Clothing', icon: 'shirt' },
-  { name: 'Womens Clothing', icon: 'woman' },
-  { name: 'Baby Items', icon: 'happy' },
-  { name: 'Sunglass', icon: 'glasses' },
-  { name: 'Phone Accessories', icon: 'phone-portrait' },
-  { name: 'Fitness', icon: 'barbell' },
-  { name: 'Watches', icon: 'watch' },
-  { name: 'Food Items', icon: 'fast-food' },
-  { name: 'Traveling', icon: 'airplane' },
-  { name: 'Gadgets', icon: 'hardware-chip' },
+  { name: 'Bags', icon: 'bag-handle', image: require('../assets/categories/bags.png') },
+  { name: 'Shoes', icon: 'footsteps', image: require('../assets/categories/shoes.png') },
+  { name: 'Jewelry', icon: 'diamond', image: require('../assets/categories/jewelry.png') },
+  { name: 'Beauty Products', icon: 'color-palette', image: require('../assets/categories/beauty.png') },
+  { name: 'Mens Clothing', icon: 'shirt', image: require('../assets/categories/mens.png') },
+  { name: 'Womens Clothing', icon: 'woman', image: require('../assets/categories/womens.png') },
+  { name: 'Baby Items', icon: 'happy', image: require('../assets/categories/baby.png') },
+  { name: 'Sunglass', icon: 'glasses', image: require('../assets/categories/sunglass.png') },
+  { name: 'Phone Accessories', icon: 'phone-portrait', image: require('../assets/categories/phone.png') },
+  { name: 'Fitness', icon: 'barbell', image: require('../assets/categories/fitness.png') },
+  { name: 'Watches', icon: 'watch', image: require('../assets/categories/watch.png') },
+  { name: 'Food Items', icon: 'fast-food', image: require('../assets/categories/grocery.png') },
+  { name: 'Traveling', icon: 'airplane', image: require('../assets/categories/travel.png') },
+  { name: 'Gadgets', icon: 'hardware-chip', image: require('../assets/categories/gadgets.png') },
 ];
 
 /**

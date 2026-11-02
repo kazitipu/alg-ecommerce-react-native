@@ -18,7 +18,7 @@ import { notifyError } from '../utils/notify';
  * A payment request is a customer claim that money was sent — it uploads a slip
  * image and flips the related order or booking to `pending` so an admin can
  * verify it. Two parallel collections exist for historical reasons:
- *   `paymentRequest`    — ship-for-me bookings and product requests
+ *   `paymentRequest`    — product requests
  *   `paymentRequestApi` — D2D orders in `ordersApi`
  *
  * NOTE: the web versions wrote these follow-up updates with
@@ -114,14 +114,6 @@ export const uploadPaymentRequest2 = async paymentObj => {
     return undefined;
   }
 };
-
-/** Payment against a "Ship for me" booking. */
-export const uploadShipmentPaymentRequest = async paymentObj =>
-  createPaymentRequest('paymentRequest', paymentObj, async payload =>
-    updateRelatedDocs('shipForMe', payload.productRequestArray, 'bookingId', () => ({
-      paymentRequested: true,
-    })),
-  );
 
 /**
  * Payment against D2D orders, applying the advance-payment discount.

@@ -7,11 +7,14 @@
  * additionally capped at `maximumDiscount`.
  */
 
+/** The web's messages (`placeOrder.jsx` → `handleAddCoupon`). */
 export const COUPON_ERRORS = {
-  NOT_FOUND: 'No coupon available with this code. Try another.',
-  EXPIRED: 'Sorry, this coupon has expired.',
-  MINIMUM: minimum => `Your minimum order amount must be ${minimum} Tk.`,
-  LIMIT: limit => `You've already used this coupon the maximum ${limit} times.`,
+  EMPTY: 'Please add a coupon code first.',
+  NOT_FOUND: 'No coupon available with this coupon code. try another',
+  EXPIRED: 'Sorry this coupon has expired!.',
+  MINIMUM: minimum => `your minimum order amount must be ${minimum}Tk`,
+  LIMIT: limit =>
+    `You've already used this coupon more than the maximum usage limit: ${limit}`,
 };
 
 /**
@@ -25,8 +28,9 @@ export const validateCoupon = (coupon, totalAmount, currentUser) => {
     return { valid: false, reason: COUPON_ERRORS.MINIMUM(coupon.minimumOrder) };
   }
 
+  // As on the web (`expirationDate >= today`), an unreadable date counts as expired.
   const expiresAt = new Date(coupon.expirationDate).getTime();
-  if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
+  if (!(expiresAt >= Date.now())) {
     return { valid: false, reason: COUPON_ERRORS.EXPIRED };
   }
 
@@ -52,16 +56,19 @@ export const getCouponAmount = (coupon, totalAmount) => {
   return coupon.discountAmount;
 };
 
-/** Bumps the customer's per-coupon usage counter for `users/{uid}`. */
+/**
+ * Bumps the customer's per-coupon usage counter for `users/{uid}`. Like the
+ * web, a first use stores the whole coupon with `used: 1`.
+ */
 export const withCouponUsage = (currentUser, coupon) => {
   const existing = currentUser?.usedCoupons || [];
   const already = existing.find(entry => entry.id === coupon.id);
 
   return already
     ? existing.map(entry =>
-        entry.id === coupon.id ? { ...entry, used: entry.used + 1 } : entry,
+        entry.id === coupon.id ? { ...entry, used: parseInt(entry.used, 10) + 1 } : entry,
       )
-    : [...existing, { id: coupon.id, used: 1 }];
+    : [...existing, { ...coupon, used: 1 }];
 };
 
 export default { validateCoupon, getCouponAmount, withCouponUsage, COUPON_ERRORS };

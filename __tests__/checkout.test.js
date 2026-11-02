@@ -9,7 +9,17 @@ import {
   validateCoupon,
   withCouponUsage,
 } from '../src/utils/coupon';
-import { buildOrders, getShopTotal, summarizeOrder } from '../src/utils/order';
+import {
+  buildNewOrderPayment,
+  buildOrders,
+  getCustomsCharge,
+  getDeliveryCharge,
+  getPayNowOffer,
+  getPayableNow,
+  getShopTotal,
+  isAwaitingPayment,
+  summarizeOrder,
+} from '../src/utils/order';
 
 const FUTURE = '2099-01-01';
 const PAST = '2000-01-01';
@@ -81,7 +91,8 @@ describe('discount amount', () => {
 
 describe('coupon usage tracking', () => {
   it('starts a counter for a first-time coupon', () => {
-    expect(withCouponUsage({}, percentCoupon)).toEqual([{ id: 'c1', used: 1 }]);
+    // Like the web, the first use stores the whole coupon.
+    expect(withCouponUsage({}, percentCoupon)).toEqual([{ ...percentCoupon, used: 1 }]);
   });
 
   it('increments an existing counter and leaves others alone', () => {
@@ -183,5 +194,76 @@ describe('buildOrders', () => {
     });
     expect(orders[0].orderId).toBe('existing');
     expect(build({})[0].orderId).toBeDefined();
+  });
+});
+
+describe('place order, as on the web', () => {
+  it('charges goods minus coupon now, excluding all shipping', () => {
+    expect(getPayableNow(1000, 150.5)).toBe(850);
+    expect(getPayableNow(1000, 0)).toBe(1000);
+  });
+
+  it('shows customs as parseInt(parseInt(rate) x weight)', () => {
+    expect(getCustomsCharge({ items: [{ shippingRate: '770.9', weight: '0.60' }] })).toBe(462);
+    expect(getCustomsCharge({ items: [{}] })).toBe(0);
+  });
+
+  it('falls back to 100 Tk delivery for a missing or failed quote', () => {
+    expect(getDeliveryCharge({ s1: 220 }, { shopId: 's1' })).toBe(220);
+    expect(getDeliveryCharge({ s1: NaN }, { shopId: 's1' })).toBe(100);
+    expect(getDeliveryCharge({}, { shopId: 's2' })).toBe(100);
+  });
+
+  it('keeps the exact coupon share but subtracts its whole part', () => {
+    const shop = id => ({ shopId: id, items: [{ id, skus: [{ sku_id: 'a', price: 100, totalQuantity: 5 }] }] });
+    const orders = buildOrders({
+      pendingOrders: [shop('s1'), shop('s2'), shop('s3')],
+      couponAmount: 100,
+      deliveryAddress: {},
+      currency: 17,
+      createdAt: 'TS',
+    });
+    expect(orders[0].couponAmount).toBeCloseTo(33.333, 2);
+    expect(orders[0].orderTotal).toBe(467);
+  });
+
+  it('works out the pay-now offer like the discount modal', () => {
+    const partial = { payNow100: 5, payNow80: 3, payNow60: 1 };
+    expect(getPayNowOffer(partial, 1000, '5%')).toEqual({ offer: '5%', total: 950, payableTotal: 950, payNowPercent: '100%' });
+    expect(getPayNowOffer(partial, 1000, '3%')).toEqual({ offer: '3%', total: 970, payableTotal: 800, payNowPercent: '80%' });
+    expect(getPayNowOffer(partial, 1000, '1%')).toEqual({ offer: '1%', total: 990, payableTotal: 600, payNowPercent: '60%' });
+  });
+
+  it('files the new-order payment with the web modal fields', () => {
+    const orders = [{ orderId: 1, shopId: 's1', items: [{ skus: [{ price: 100, totalQuantity: 10 }] }] }];
+    const newOrder = { total: 950, payableTotal: 950, offer: '5%', payNowPercent: '100%', couponAmount: 50 };
+    const user = { id: 'u1', displayName: 'Kazi' };
+    const bank = buildNewOrderPayment({ newOrder, orders, currentUser: user, method: 'City', now: new Date(2026, 10, 2) });
+    expect(bank).toMatchObject({
+      status: 'pending',
+      amount: 950,
+      method: 'City',
+      userId: 'u1',
+      actualTotal: 1000,
+      actualTotalAfterCouponAdd: 950,
+      offer: '5%',
+      payNowPercent: '100%',
+      payableTotal: 950,
+      total: 950,
+      payableTotalWithGatewayCharge: 950,
+      couponAmount: 50,
+    });
+    expect(bank.pendingOrders[0]).toMatchObject({ paymentStatus: 'pending', payNowPercent: '100%', actualTotal: 1000, offer: '5%' });
+    const bkash = buildNewOrderPayment({ newOrder, orders, currentUser: user, method: 'Bkash' });
+    expect(bkash.payableTotalWithGatewayCharge).toBe(964);
+  });
+});
+
+describe('order success payment state', () => {
+  it('treats only purchase-later (or unknown) orders as unpaid', () => {
+    expect(isAwaitingPayment({ paymentStatus: 'purchaseLater' })).toBe(true);
+    expect(isAwaitingPayment({})).toBe(true);
+    expect(isAwaitingPayment({ paymentStatus: 'pending' })).toBe(false);
+    expect(isAwaitingPayment({ paymentStatus: 'paid' })).toBe(false);
   });
 });

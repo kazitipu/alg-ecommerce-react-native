@@ -21,11 +21,7 @@ const WEB_ACTIONS = [
   'getSingleOrderApiRedux', 'getAllOrdersApiRedux', 'getOrderTrackingResultRedux',
   'setBookingRequestRedux', 'setProductRequestRedux', 'getSingleProductRequestRedux',
   'getAllBookingsOfSingleUserRedux',
-  'setShipForMeRedux', 'updateShipForMeRedux', 'getSingleShipForMeRedux',
-  'getAllShipForMeOfSingleUserRedux', 'updateShipmentRequestRedux',
-  'getAllShipForMeListRedux', 'uploadShipForMeListRedux', 'updateShipForMeListRedux',
-  'deleteShipForMeListRedux', 'getAllD2DRatesRedux',
-  'uploadPaymentRequestRedux2', 'uploadShipmentPaymentRequestRedux', 'uploadRefundApplyRedux',
+  'uploadPaymentRequestRedux2', 'uploadRefundApplyRedux',
   'sendOtpRedux', 'verifyOtpRedux',
 ];
 

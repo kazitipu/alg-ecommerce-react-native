@@ -21,7 +21,8 @@ export default function wishlistReducer(state = INITIAL_STATE, action) {
     case REMOVE_FROM_WISHLIST:
       return {
         ...state,
-        list: state.list.filter(id => id !== action.product_id),
+        // The list holds saved products, so match on their id.
+        list: state.list.filter(product => product?.id !== action.product_id),
       };
 
     default:

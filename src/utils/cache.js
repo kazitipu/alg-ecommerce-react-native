@@ -61,3 +61,25 @@ export const clearCache = key => {
 };
 
 export default { getCache, setCache, fetchOnce, clearCache };
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Runs `loader`, retrying a failed attempt (thrown error) up to `retries`
+ * more times with a growing pause. The product API fails intermittently, so
+ * one bad answer should not end a list.
+ */
+export const withRetry = async (loader, { retries = 2, delayMs = 700 } = {}) => {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+       
+      return await loader();
+    } catch (error) {
+      lastError = error;
+       
+      if (attempt < retries) await wait(delayMs * (attempt + 1));
+    }
+  }
+  throw lastError;
+};

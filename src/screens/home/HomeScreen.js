@@ -1,49 +1,50 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
+import Animated, {
+  FadeIn,
+  ZoomIn,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 
-import {
-  CampaignCard,
-  CategoryStrip,
-  Carousel,
-  ProductRail,
-  Skeleton,
-} from '../../components';
+import CampaignSection from './components/CampaignSection';
+import CategoryGrid from './components/CategoryGrid';
+import HeroCarousel from './components/HeroCarousel';
+import HomeHeader from './components/HomeHeader';
+import HomeProductRail from './components/HomeProductRail';
+import ServicesSection from './components/ServicesSection';
 import {
   getAllBannersRedux,
+  getAllBookingsOfSingleUserRedux,
   getAllCampaignsRedux,
   getAllHomeCategoryRedux,
+  getAllOrdersApiRedux,
 } from '../../actions';
 import { getSelectedIntroModal } from '../../firebase/firebase.utils';
 import { HOME_RAILS } from '../../constants/categories';
+import useAuth from '../../hooks/useAuth';
 import { ROUTES } from '../../navigation/routes';
 import { clearCache } from '../../utils/cache';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, spacing } from '../../theme';
 
 /**
- * Home screen, mirroring the web page's section order:
- * search bar, hero banners, category strip, campaigns, six fixed product rails,
- * then one rail per admin-configured home category.
- *
- * The web version deferred its fetches behind a `setTimeout` after first paint
- * and wrapped them in a 10-minute cache. Here the fetches are plain effects —
- * React Native paints the shell immediately regardless — while the rails keep
- * their own five-minute memo cache.
+ * Home screen. Behaviour follows the web home page: search (keyword, pasted
+ * 1688/Taobao link, or photo), hero banners, category tiles, campaigns with
+ * countdowns, six fixed product rails and one rail per admin home category
+ * (with shortcuts to ALG's services after the first two),
+ * plus the promotional intro modal. A signed-in user's bookings,
+ * requests and orders are loaded too, as the web page does on mount.
  */
+const SERVICES_SECTION = { key: 'services' };
+
 const HomeScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id || currentUser?.uid;
 
   const banners = useSelector(state => state.orders.banners);
   const campaigns = useSelector(state => state.orders.campaigns);
@@ -52,6 +53,11 @@ const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [introImage, setIntroImage] = useState(null);
   const [introVisible, setIntroVisible] = useState(false);
+
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler(event => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   const loadAll = useCallback(() => {
     dispatch(getAllBannersRedux());
@@ -62,6 +68,12 @@ const HomeScreen = () => {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (!userId) return;
+    dispatch(getAllBookingsOfSingleUserRedux(userId));
+    dispatch(getAllOrdersApiRedux(userId));
+  }, [dispatch, userId]);
 
   // Promotional splash, shown once per launch when the admin has one selected.
   useEffect(() => {
@@ -79,7 +91,7 @@ const HomeScreen = () => {
     };
   }, []);
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     // Drop the memoised rail results so a pull-to-refresh really refetches.
     clearCache();
@@ -87,13 +99,8 @@ const HomeScreen = () => {
     setRefreshing(false);
   }, [loadAll]);
 
-  const openSearch = () => navigation.navigate(ROUTES.SEARCH);
-
   const openCategory = category =>
-    navigation.navigate(ROUTES.COLLECTION, {
-      keyword: category.name,
-      title: category.name,
-    });
+    navigation.navigate(ROUTES.COLLECTION, { keyword: category.name, title: category.name });
 
   const openCampaign = campaign =>
     navigation.navigate(ROUTES.COLLECTION, {
@@ -102,68 +109,53 @@ const HomeScreen = () => {
       categoryId: campaign.categoryId,
     });
 
-  // The banner list is split the same way as on the web: entries flagged
-  // `secondBanner` are a side promo rather than part of the hero rotation.
-  const heroBanners = (banners || []).filter(banner => !banner.secondBanner);
-
-  const railSections = [
+  const rails = [
     ...HOME_RAILS,
     ...(homeCategories || []).map(category => ({
       title: category.name,
       categoryId: category.categoryId,
+      isHomeCategory: true,
     })),
   ];
+  // The services grid sits after the first two product rails.
+  const sections = [...rails.slice(0, 2), SERVICES_SECTION, ...rails.slice(2)];
 
-  const renderHeader = () => (
+  const listHeader = (
     <View>
-      <Pressable style={styles.searchBar} onPress={openSearch}>
-        <Icon name="search" size={18} color={colors.textMuted} />
-        <Text style={styles.searchText}>Search products, or paste a 1688 link</Text>
-        <Icon name="camera-outline" size={20} color={colors.primary} />
-      </Pressable>
-
-      <View style={styles.bannerWrap}>
-        {heroBanners.length > 0 ? (
-          <Carousel data={heroBanners} imageKey="banner" onPressItem={openCampaign} />
-        ) : (
-          <Skeleton width="100%" height={180} borderRadius={radius.md} />
-        )}
-      </View>
-
-      <CategoryStrip onSelect={openCategory} />
-
-      {campaigns?.length > 0 ? (
-        <View style={styles.campaigns}>
-          <Text style={styles.sectionTitle}>Campaigns</Text>
-          <FlatList
-            data={campaigns}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.campaignList}
-            keyExtractor={(item, index) => item.id || item.name || String(index)}
-            renderItem={({ item }) => (
-              <CampaignCard campaign={item} onPress={() => openCampaign(item)} />
-            )}
-          />
-        </View>
-      ) : null}
+      <HeroCarousel banners={banners} />
+      <CategoryGrid onSelect={openCategory} variant={5} />
+      <CampaignSection campaigns={campaigns} onSelect={openCampaign} />
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={railSections}
-        keyExtractor={item => item.categoryId || item.title}
-        ListHeaderComponent={renderHeader}
-        renderItem={({ item }) => (
-          <ProductRail title={item.title} categoryId={item.categoryId} />
-        )}
+      <HomeHeader scrollY={scrollY} />
+
+      <Animated.FlatList
+        data={sections}
+        keyExtractor={item => item.key || item.categoryId || item.title}
+        ListHeaderComponent={listHeader}
+        renderItem={({ item }) =>
+          item === SERVICES_SECTION ? (
+            <ServicesSection variant={4} />
+          ) : (
+            <HomeProductRail
+              title={item.title}
+              categoryId={item.categoryId}
+              isHomeCategory={item.isHomeCategory}
+            />
+          )
+        }
         ListFooterComponent={<View style={styles.footer} />}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
+            colors={[colors.primary]}
             tintColor={colors.primary}
           />
         }
@@ -173,17 +165,21 @@ const HomeScreen = () => {
         visible={introVisible}
         transparent
         animationType="fade"
+        statusBarTranslucent
         onRequestClose={() => setIntroVisible(false)}>
         <Pressable style={styles.introBackdrop} onPress={() => setIntroVisible(false)}>
-          <View style={styles.introCard}>
+          <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.introCard}>
             <Image source={{ uri: introImage }} style={styles.introImage} resizeMode="contain" />
+          </Animated.View>
+          <Animated.View entering={FadeIn.delay(250)}>
             <Pressable
               style={styles.introClose}
               onPress={() => setIntroVisible(false)}
-              hitSlop={12}>
-              <Icon name="close-circle" size={32} color={colors.white} />
+              hitSlop={12}
+              accessibilityLabel="Close">
+              <Icon name="close" size={22} color={colors.text} />
             </Pressable>
-          </View>
+          </Animated.View>
         </Pressable>
       </Modal>
     </View>
@@ -191,46 +187,27 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundAlt },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  searchText: {
-    flex: 1,
-    marginLeft: spacing.sm,
-    fontSize: typography.size.sm,
-    color: colors.textMuted,
-  },
-  bannerWrap: { paddingHorizontal: spacing.md, marginTop: spacing.md },
-  sectionTitle: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  campaigns: { marginTop: spacing.lg },
-  campaignList: { paddingHorizontal: spacing.md },
-  footer: { height: spacing.xxl },
+  container: { flex: 1, backgroundColor: '#f6f6f8' },
+  // Clears the floating tab bar and the WhatsApp button.
+  footer: { height: spacing.xxl + spacing.lg },
   introBackdrop: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
   },
   introCard: { width: '100%', aspectRatio: 0.8 },
-  introImage: { width: '100%', height: '100%', borderRadius: radius.md },
-  introClose: { position: 'absolute', top: -spacing.xl, right: 0 },
+  introImage: { width: '100%', height: '100%', borderRadius: radius.lg },
+  introClose: {
+    marginTop: spacing.md,
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default HomeScreen;

@@ -43,6 +43,16 @@ export const colors = {
   overlay: 'rgba(0, 0, 0, 0.5)',
 };
 
+/** Gradient stops for `react-native-linear-gradient`, start to end. */
+export const gradients = {
+  brand: ['#ff3d5a', '#ff4a4e', '#ff7a45'],
+  sunset: ['#ff8a3d', '#ff4a4e'],
+  scrim: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.72)'],
+};
+
+/** Pastel tile backgrounds, cycled across the home category grid. */
+export const tints = ['#fff1ec', '#eef6ff', '#f3efff', '#ecfbf3', '#fff8e6', '#ffeef5', '#eefbfc'];
+
 /** Maps `shipmentStatusScore` 1-7 onto the freight pipeline shown in tracking UI. */
 export const shipmentStages = [
   { score: 1, label: 'Pending', dateField: 'PendingDate' },
@@ -111,4 +121,4 @@ export const shadow = {
   },
 };
 
-export default { colors, spacing, typography, radius, shadow, shipmentStages };
+export default { colors, gradients, tints, spacing, typography, radius, shadow, shipmentStages };

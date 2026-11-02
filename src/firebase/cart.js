@@ -137,9 +137,10 @@ export const addCartItemTofirestore = async (userAuth, product) => {
     totalQuantity,
     product.currency,
   );
+  // A missing tier or rate keeps each sku's stored price rather than writing 0.
   mergedSkus = mergedSkus.map(sku => ({
     ...sku,
-    price: incomingItem.price_range ? tierPrice : sku.price,
+    price: tierPrice > 0 ? tierPrice : sku.price,
   }));
 
   const newCart = firestoreCart.map(shop => {
@@ -148,14 +149,26 @@ export const addCartItemTofirestore = async (userAuth, product) => {
       ...shop,
       items: shop.items.map(item =>
         item.id === itemAlreadyAdded.id
-          ? { ...itemAlreadyAdded, skus: mergedSkus }
+          ? {
+              ...itemAlreadyAdded,
+              skus: mergedSkus,
+              // Both weights are line totals, so the merged line weighs their sum.
+              weight: (
+                (Number(itemAlreadyAdded.weight) || 0) + (Number(incomingItem.weight) || 0)
+              ).toFixed(2),
+            }
           : item,
       ),
     };
   });
 
+  // The cart is stored oldest first; re-adding a product makes it the newest,
+  // so its entry moves to the end (and to the top of the newest-first cart).
+  const isMerged = shop => (shop.items || []).some(item => item.id === itemAlreadyAdded.id);
+  const reordered = [...newCart.filter(shop => !isMerged(shop)), ...newCart.filter(isMerged)];
+
   try {
-    await updateDoc(cartRef, { cart: newCart });
+    await updateDoc(cartRef, { cart: reordered });
     const updated = await getDoc(cartRef);
     return updated.data().cart;
   } catch (error) {
@@ -292,12 +305,19 @@ export const updateCartSkuQuantity = async (userAuth, { itemId, skuId, quantity,
             0,
           );
           const tierPrice = getTierPriceInTaka(item.price_range, lineQuantity, taka);
+          const previousQuantity = (item.skus || []).reduce(
+            (total, sku) => total + (Number(sku.totalQuantity) || 0),
+            0,
+          );
 
           return {
             ...item,
-            skus: item.price_range
-              ? skus.map(sku => ({ ...sku, price: tierPrice }))
-              : skus,
+            // A missing tier or rate keeps each sku's stored price rather than writing 0.
+            skus: tierPrice > 0 ? skus.map(sku => ({ ...sku, price: tierPrice })) : skus,
+            // `weight` is stored as the line's total, so it scales with the quantity.
+            ...(item.weight && previousQuantity > 0
+              ? { weight: ((Number(item.weight) / previousQuantity) * lineQuantity).toFixed(2) }
+              : null),
           };
         })
         .filter(Boolean);
@@ -305,6 +325,28 @@ export const updateCartSkuQuantity = async (userAuth, { itemId, skuId, quantity,
       return items.length > 0 ? { ...shop, items } : null;
     })
     .filter(Boolean);
+
+  await updateDoc(cartRef, { cart: updatedCart });
+  const updated = await getDoc(cartRef);
+  return updated.data().cart;
+};
+
+/**
+ * Saves a fresh China local courier quote (whole taka, as a string) on the
+ * cart entry holding `itemId`, after its quantities changed in the cart.
+ */
+export const updateCartLocalShipping = async (userAuth, itemId, localShipping) => {
+  if (!userAuth?.id && !userAuth?.uid) return undefined;
+
+  const cartRef = doc(db, `carts/${userAuth.id || userAuth.uid}`);
+  const snapShot = await getDoc(cartRef);
+  if (!snapShot.exists()) return undefined;
+
+  const updatedCart = snapShot
+    .data()
+    .cart.map(shop =>
+      (shop.items || []).some(item => item.id === itemId) ? { ...shop, localShipping } : shop,
+    );
 
   await updateDoc(cartRef, { cart: updatedCart });
   const updated = await getDoc(cartRef);

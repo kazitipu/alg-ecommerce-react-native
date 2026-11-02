@@ -51,22 +51,29 @@ export const fetchShipping = async ({ productId, totalQuantity, skus }) => {
 };
 
 /**
- * Uploads a photo for reverse image search.
- * `file` is `{ uri, fileName, type }` from the image picker — React Native's
- * FormData accepts that object directly in place of a browser `File`.
+ * Picker options for a photo search: the web shrinks the photo to fit
+ * 500 × 500 and re-encodes it as JPEG at 70% before uploading, and the
+ * server takes it as base64.
  */
-export const uploadSearchImage = async file => {
-  const form = new FormData();
-  form.append('image', {
-    uri: file.uri,
-    name: file.fileName || 'search.jpg',
-    type: file.type || 'image/jpeg',
-  });
+export const SEARCH_PHOTO_OPTIONS = {
+  mediaType: 'photo',
+  selectionLimit: 1,
+  includeBase64: true,
+  maxWidth: 500,
+  maxHeight: 500,
+  quality: 0.7,
+};
 
-  const { data } = await client.post('/api/products/upload-image', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
+/**
+ * Uploads a photo for reverse image search, as the web does: JSON
+ * `{ imageBase64 }` (no `data:` prefix). Returns the image id the search
+ * endpoint takes (`result.result`), or null.
+ */
+export const uploadSearchImage = async asset => {
+  const imageBase64 = String(asset?.base64 || '').replace(/^data:[^,]*,/, '');
+  if (!imageBase64) return null;
+  const { data } = await client.post('/api/products/upload-image', { imageBase64 });
+  return data?.result?.result || null;
 };
 
 /**

@@ -2,37 +2,28 @@ import axios from 'axios';
 
 import * as types from '../constants/ActionTypes';
 import { ENDPOINTS } from '../constants/config';
-import { notifyError, notifyInfo, notifySuccess } from '../utils/notify';
+import { notifyInfo, notifySuccess } from '../utils/notify';
 import {
   addCartItemTofirestore,
   addToOrdersApi,
-  deleteShipForMeList,
   getAllBanners,
   getAllBookingsOfSingleUser,
   getAllCampaigns,
-  getAllD2DRates,
   getAllHomeCategory,
   getAllNotices,
   getAllOrdersApi,
-  getAllShipForMeList,
-  getAllShipForMeOfSingleUser,
   getCurrency,
   getOrderOrShipmentRequest,
   getSingleOrderApi,
   getSingleProductRequest,
-  getSingleShipForMe,
   removeItemFromCart,
   setProductRequest,
+  updateCartLocalShipping,
   updateCartSkuQuantity,
-  setShipForMe,
   updateOrdersApi,
-  updateShipForMe,
-  updateShipForMeList,
-  updateShipmentRequest,
+  updateUser,
   uploadPaymentRequest2,
   uploadRefundApply,
-  uploadShipForMeList,
-  uploadShipmentPaymentRequest,
   verifyOtp,
 } from '../firebase/firebase.utils';
 
@@ -136,6 +127,12 @@ export const updateCartQuantityRedux = payload => async dispatch => {
   if (cartArray) dispatch({ type: 'SET_REDUX_CART', payload: cartArray });
 };
 
+/** Stores a recalculated China local courier charge on a cart entry. */
+export const updateCartLocalShippingRedux = (currentUser, itemId, localShipping) => async dispatch => {
+  const cartArray = await updateCartLocalShipping(currentUser, itemId, localShipping);
+  if (cartArray) dispatch({ type: 'SET_REDUX_CART', payload: cartArray });
+};
+
 export const addToPendingOrdersRedux = pendingOrders => async dispatch => {
   dispatch({ type: 'ADD_TO_PENDING_ORDERS', payload: pendingOrders });
 };
@@ -218,6 +215,8 @@ export const setOrderObj = orderObj => ({
 export const addToOrdersApiRedux = (currentUser, orders) => async dispatch => {
   const ordersArray = await addToOrdersApi(currentUser, orders);
   dispatch({ type: 'ADD_TO_ORDERS_API', payload: ordersArray });
+  // The orders actually stored, so the caller can tell a failed save apart.
+  return ordersArray;
 };
 
 export const updateOrdersApiRedux = (currentUser, orders) => async dispatch => {
@@ -253,7 +252,8 @@ export const setBookingRequestRedux = bookingObj => async dispatch => {
 
 export const setProductRequestRedux = bookingObj => async dispatch => {
   const uploadedBookingObj = await setProductRequest(bookingObj);
-  dispatch({ type: 'SET_PRODUCT_REQUEST', payload: uploadedBookingObj });
+  if (uploadedBookingObj) dispatch({ type: 'SET_PRODUCT_REQUEST', payload: uploadedBookingObj });
+  return uploadedBookingObj;
 };
 
 export const getSingleProductRequestRedux = bookingId => async dispatch => {
@@ -266,77 +266,11 @@ export const getAllBookingsOfSingleUserRedux = userId => async dispatch => {
   dispatch({ type: 'GET_ALL_BOOKINGS_OF_SINGLE_USER', payload: bookingsArray });
 };
 
-// --- Ship for me -------------------------------------------------------------
-
-export const setShipForMeRedux = bookingObj => async dispatch => {
-  const uploadedBookingObj = await setShipForMe(bookingObj);
-  dispatch({ type: 'SET_SHIP_FOR_ME', payload: uploadedBookingObj });
-};
-
-export const updateShipForMeRedux = bookingObj => async dispatch => {
-  const uploadedBookingObj = await updateShipForMe(bookingObj);
-  dispatch({ type: 'UPDATE_SHIP_FOR_ME', payload: uploadedBookingObj });
-};
-
-export const getSingleShipForMeRedux = bookingId => async dispatch => {
-  const shipForMeObj = await getSingleShipForMe(bookingId);
-  dispatch({ type: 'GET_SINGLE_SHIP_FOR_ME', payload: shipForMeObj });
-};
-
-export const getAllShipForMeOfSingleUserRedux = userId => async dispatch => {
-  const bookingsArray = await getAllShipForMeOfSingleUser(userId);
-  dispatch({ type: 'GET_ALL_SHIP_FOR_ME_OF_SINGLE_USER', payload: bookingsArray });
-};
-
-export const updateShipmentRequestRedux = requestObj => async dispatch => {
-  const updatedRequest = await updateShipmentRequest(requestObj);
-  dispatch({ type: 'UPDATE_SHIPMENT_REQUEST', payload: updatedRequest });
-};
-
-// --- Ship-for-me draft list --------------------------------------------------
-
-export const getAllShipForMeListRedux = userId => async dispatch => {
-  const shipForMesArray = await getAllShipForMeList(userId);
-  dispatch({ type: 'GET_ALL_SHIP_FOR_ME_LIST', payload: shipForMesArray });
-};
-
-export const uploadShipForMeListRedux = shipForMeObj => async dispatch => {
-  const shipObj = await uploadShipForMeList(shipForMeObj);
-  dispatch({ type: 'UPLOAD_SHIP_FOR_ME_LIST', payload: shipObj });
-};
-
-export const updateShipForMeListRedux = shipForMeObj => async dispatch => {
-  const updatedShipForMe = await updateShipForMeList(shipForMeObj);
-  dispatch({ type: 'UPDATE_SHIP_FOR_ME_LIST', payload: updatedShipForMe });
-};
-
-export const deleteShipForMeListRedux = shipForMeObj => async dispatch => {
-  await deleteShipForMeList(shipForMeObj);
-  dispatch({ type: 'DELETE_SHIP_FOR_ME_LIST', payload: shipForMeObj });
-};
-
-// --- Freight rates -----------------------------------------------------------
-
-export const getAllD2DRatesRedux = (freightType, country) => async dispatch => {
-  const d2dRates = await getAllD2DRates(freightType, country);
-  dispatch({ type: 'GET_ALL_D2D_RATES', payload: d2dRates });
-};
-
 // --- Payments and refunds ----------------------------------------------------
 
 export const uploadPaymentRequestRedux2 = paymentObject => async dispatch => {
   const paymentObj = await uploadPaymentRequest2(paymentObject);
   dispatch({ type: 'UPDATE_BOOKINGS_OF_SINGLE_USER', payload: paymentObj });
-};
-
-export const uploadShipmentPaymentRequestRedux = paymentObject => async dispatch => {
-  const paymentObj = await uploadShipmentPaymentRequest(paymentObject);
-  // The reducer updates one booking, so only the first entry is dispatched.
-  if (!paymentObj?.productRequestArray?.length) return;
-  dispatch({
-    type: 'UPDATE_SHIPMENT_PAYMENT_REQUEST',
-    payload: paymentObj.productRequestArray[0],
-  });
 };
 
 export const uploadRefundApplyRedux = refundObject => async dispatch => {
@@ -347,6 +281,22 @@ export const uploadRefundApplyRedux = refundObject => async dispatch => {
       : 'UPLOAD_REFUND_APPLY',
     payload: refund,
   });
+  // The updated order (undefined when the request could not be filed).
+  return refund;
+};
+
+// --- Profile photo -----------------------------------------------------------
+
+/**
+ * Saves (or, with `photoURL: ''`, removes) the profile photo on `users/{id}`
+ * and in the signed-in user, so every avatar in the app updates at once.
+ */
+export const updateProfilePhotoRedux = (currentUser, photoURL) => async dispatch => {
+  if (!currentUser?.id) return undefined;
+  await updateUser({ id: currentUser.id, photoURL });
+  const next = { ...currentUser, photoURL };
+  dispatch({ type: 'SET_CURRENT_USER', payload: next });
+  return next;
 };
 
 // --- Phone OTP ---------------------------------------------------------------
@@ -357,11 +307,9 @@ export const sendOtpRedux = number => async dispatch => {
 };
 
 export const verifyOtpRedux = (number, otp) => async dispatch => {
+  // `verifyOtp` reports its own failures (expired, wrong code, network).
   const userObj = await verifyOtp(number, otp);
-  if (!userObj) {
-    notifyError('Could not verify that code.');
-    return undefined;
-  }
+  if (!userObj) return undefined;
   dispatch({ type: 'SET_CURRENT_USER', payload: userObj });
   return userObj;
 };

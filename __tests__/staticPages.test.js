@@ -7,12 +7,12 @@ import { DIVISIONS, DISTRICTS_BY_DIVISION, districtsOf } from '../src/constants/
 import { allThanas } from '../src/constants/thana';
 
 const EXPECTED = {
-  ABOUT_US: 3,
+  ABOUT_US: 16,
   FAQ: 14,
   PRIVACY: 28,
-  REFUND: 13,
+  REFUND: 14,
   TERMS: 10,
-  TAX_AND_SHIPPING: 5,
+  TAX_AND_SHIPPING: 6,
   HOW_TO_ORDER: 7,
   CONTACT: 4,
 };
@@ -82,5 +82,50 @@ describe('Bangladesh address data', () => {
     const dhaka = allThanas.find(entry => entry.name === 'Dhaka');
     expect(dhaka.thana.length).toBeGreaterThan(10);
     expect(dhaka.thana).toContain('DHANMONDI');
+  });
+});
+
+describe('content the web kept outside <p> tags', () => {
+  const { groupBlocks, isProhibitedSection, withoutMarker } = require('../src/screens/static/staticSections');
+
+  it('shows the About us welcome paragraph and every prohibited item on its own line', () => {
+    const about = STATIC_PAGES.ABOUT_US.blocks;
+    expect(about.some(b => b.type === 'text' && b.text.startsWith('ALG Limited Wholesale'))).toBe(true);
+    const items = about.filter(b => b.type === 'item');
+    expect(items).toHaveLength(13);
+    // Bengali য় can be stored precomposed or as য + nukta; compare normalised.
+    expect(withoutMarker(items[0].text).normalize('NFD')).toBe('সেক্স টয়'.normalize('NFD'));
+    const sections = groupBlocks(about, 'About us');
+    expect(sections[0].title).toBe('');
+    expect(isProhibitedSection(sections[1])).toBe(true);
+  });
+
+  it('restores the refund and tax & shipping introductions', () => {
+    expect(STATIC_PAGES.REFUND.blocks[1].text).toContain('কার্টন খুলে পরিদর্শন');
+    expect(STATIC_PAGES.TAX_AND_SHIPPING.blocks[1].text).toContain('আমরা B2B ব্যবসা করি');
+  });
+
+  it('drops the literal markdown markers the web carried', () => {
+    Object.values(STATIC_PAGES).forEach(page =>
+      page.blocks.forEach(block => {
+        expect(block.text).not.toMatch(/^#|\*\*/);
+      }),
+    );
+  });
+});
+
+describe('contact details', () => {
+  const { parseContactDetails } = require('../src/screens/static/staticSections');
+
+  it('turns the web contact lines into labelled, de-duplicated details', () => {
+    const details = parseContactDetails(STATIC_PAGES.CONTACT.blocks);
+    expect(details.map(d => d.kind)).toEqual(['phone', 'address', 'email', 'fax']);
+    expect(details[0].values).toEqual(['+88-01881934658']);
+    expect(details[1].values[0]).toContain('Purana Paltan');
+    expect(details[2].values).toEqual(['support@alg.com.bd']);
+  });
+
+  it('keeps unknown lines rather than dropping them', () => {
+    expect(parseContactDetails([{ text: 'Open Sat–Thu' }])).toEqual([{ kind: 'other', label: '', values: ['Open Sat–Thu'] }]);
   });
 });

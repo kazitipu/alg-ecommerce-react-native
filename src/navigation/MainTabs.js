@@ -5,16 +5,13 @@ import { useSelector } from 'react-redux';
 
 import { ROUTES } from './routes';
 import { AccountStack, CartStack, CategoryStack, HomeStack, OrdersStack } from './stacks';
-import { colors, typography } from '../theme';
+import TabBar from './TabBar';
+import { selectCartCount } from '../utils/cartCount';
 
 const Tab = createBottomTabNavigator();
 
-/**
- * Total cart lines, matching the web header badge: one per item in each shop
- * entry, or one for a shop entry that carries no items array.
- */
-export const selectCartCount = cart =>
-  (cart || []).reduce((total, shop) => total + (shop.items?.length || 1), 0);
+// Re-exported for existing callers; the rule lives with the other cart helpers.
+export { selectCartCount };
 
 /**
  * Icon renderers are built once at module scope. Creating them inline in
@@ -33,23 +30,19 @@ const TABS = [
   { name: ROUTES.TAB_HOME, component: HomeStack, label: 'Home', icon: tabBarIcon('home') },
   { name: ROUTES.TAB_CATEGORY, component: CategoryStack, label: 'Categories', icon: tabBarIcon('grid') },
   { name: ROUTES.TAB_CART, component: CartStack, label: 'Cart', icon: tabBarIcon('cart') },
-  { name: ROUTES.TAB_ORDERS, component: OrdersStack, label: 'Orders', icon: tabBarIcon('cube') },
+  { name: ROUTES.TAB_ORDERS, component: OrdersStack, label: 'Orders', icon: tabBarIcon('receipt') },
   { name: ROUTES.TAB_ACCOUNT, component: AccountStack, label: 'Account', icon: tabBarIcon('person') },
 ];
 
-const navigatorScreenOptions = {
-  headerShown: false,
-  tabBarActiveTintColor: colors.primary,
-  tabBarInactiveTintColor: colors.textMuted,
-  tabBarLabelStyle: { fontSize: typography.size.xxs },
-  tabBarStyle: { borderTopColor: colors.borderLight },
-};
+const navigatorScreenOptions = { headerShown: false };
+
+const renderTabBar = props => <TabBar {...props} />;
 
 const MainTabs = () => {
   const cartCount = useSelector(state => selectCartCount(state.cartList.cart));
 
   return (
-    <Tab.Navigator screenOptions={navigatorScreenOptions}>
+    <Tab.Navigator screenOptions={navigatorScreenOptions} tabBar={renderTabBar} backBehavior="history">
       {TABS.map(tab => (
         <Tab.Screen
           key={tab.name}

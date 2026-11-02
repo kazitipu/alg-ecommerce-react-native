@@ -12,6 +12,10 @@ const { View, Image, Text, ScrollView, FlatList } = require('react-native');
 const identity = value => value;
 const noop = () => {};
 
+// Layout animations are chainable builders (`FadeInDown.delay(80).springify()`),
+// so every method returns the same inert builder.
+const layoutAnimation = new Proxy({}, { get: () => () => layoutAnimation });
+
 const Animated = {
   View,
   Image,
@@ -65,5 +69,16 @@ module.exports = {
   Extrapolate: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
   Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
 
-  FadeIn: {}, FadeOut: {}, Layout: {}, SlideInDown: {}, SlideOutDown: {},
+  FadeIn: layoutAnimation,
+  FadeInDown: layoutAnimation,
+  FadeInRight: layoutAnimation,
+  FadeInUp: layoutAnimation,
+  FadeOut: layoutAnimation,
+  FadeOutUp: layoutAnimation,
+  FadeOutLeft: layoutAnimation,
+  Layout: layoutAnimation,
+  LinearTransition: layoutAnimation,
+  SlideInDown: layoutAnimation,
+  SlideOutDown: layoutAnimation,
+  ZoomIn: layoutAnimation,
 };

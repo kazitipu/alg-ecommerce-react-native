@@ -3,13 +3,15 @@ import { StatusBar, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import BootSplash from 'react-native-bootsplash';
 import Toast from 'react-native-toast-message';
 
 import store, { persistor } from './store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { ErrorBoundary, SupportFab } from './src/components';
+import { toastConfig } from './src/components/ToastCard';
+import AppAlertHost from './src/components/AppAlertHost';
 import useFirebaseSync from './src/hooks/useFirebaseSync';
 import usePushNotifications from './src/hooks/usePushNotifications';
 import { colors } from './src/theme';
@@ -25,6 +27,7 @@ import { colors } from './src/theme';
 const AppContent = () => {
   useFirebaseSync();
   usePushNotifications();
+  const insets = useSafeAreaInsets();
 
   // Hold the splash until the first frame is ready to show.
   useEffect(() => {
@@ -37,7 +40,9 @@ const AppContent = () => {
       <RootNavigator />
       <SupportFab />
       {/* Single toast host, replacing the ~35 ToastContainers the web app mounted. */}
-      <Toast />
+      <Toast config={toastConfig} topOffset={insets.top + 8} />
+      {/* The app's own alert sheet, used in place of the system dialog. */}
+      <AppAlertHost />
     </>
   );
 };

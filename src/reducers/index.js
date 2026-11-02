@@ -10,7 +10,6 @@ import compareReducer from './compare';
 import setOrderReducer from './orders';
 import searchedProductsArrayReducer from './searchedProducts';
 import searchedProductReducer from './searchedProductDetail';
-import shipForMeListReducer from './shipForMeList';
 import setNoticesReducer from './notices';
 
 /** Key names match the web app so ported screens read the same paths. */
@@ -25,7 +24,6 @@ const rootReducer = combineReducers({
   orders: setOrderReducer,
   searchedProducts: searchedProductsArrayReducer,
   singleProduct: searchedProductReducer,
-  shipForMeList: shipForMeListReducer,
   notices: setNoticesReducer,
 });
 

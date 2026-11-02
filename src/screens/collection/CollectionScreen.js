@@ -1,37 +1,62 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
+import Animated, {
+  FadeInDown,
+  useAnimatedScrollHandler,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
-import {
-  BottomSheet,
-  Button,
-  EmptyState,
-  ProductCard,
-  ProductCardSkeleton,
-} from '../../components';
-import { fetchVendorProducts, searchByImage, searchProducts } from '../../api';
-import { fetchOnce } from '../../utils/cache';
+import CollectionEmpty from './components/CollectionEmpty';
+import CollectionHeader from './components/CollectionHeader';
+import SortSheet from './components/SortSheet';
+import PhotoSearchBanner from './components/PhotoSearchBanner';
+import SellerBanner from './components/SellerBanner';
+import { CardMotion, PressableScale, ProductTile, ProductTileSkeleton } from '../../components';
+import useWishlistSave from '../../hooks/useWishlistSave';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { SEARCH_PHOTO_OPTIONS, fetchVendorProducts, searchByImage, searchProducts, uploadSearchImage } from '../../api';
+import { notifyError } from '../../utils/notify';
+import { fetchOnce, withRetry } from '../../utils/cache';
 import { CACHE_TTL, DEFAULTS } from '../../constants/config';
 import { ROUTES } from '../../navigation/routes';
 import { colors, radius, spacing, typography } from '../../theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GAP = spacing.sm;
+const GAP = spacing.sm + 4;
+// Scroll distance (px per event) that counts as a deliberate direction change.
+const SCROLL_INTENT = 4;
+// The first screenful of cards staggers in; later pages just appear.
+const ANIMATED_ITEMS = 6;
 
 const SORT_OPTIONS = [
-  { value: '', label: 'Default' },
-  { value: 'LowToHigh', label: 'Price: low to high' },
-  { value: 'HighToLow', label: 'Price: high to low' },
+  {
+    value: '',
+    label: 'Default',
+    caption: 'In the order the search returns',
+    icon: 'sparkles-outline',
+    tint: '#f1edff',
+    color: '#7a4cf5',
+  },
+  {
+    value: 'LowToHigh',
+    label: 'Price: low to high',
+    caption: 'Cheapest first',
+    icon: 'trending-up',
+    tint: '#e4f7ee',
+    color: '#0e9a72',
+  },
+  {
+    value: 'HighToLow',
+    label: 'Price: high to low',
+    caption: 'Most expensive first',
+    icon: 'trending-down',
+    tint: '#ffece6',
+    color: '#f05a1a',
+  },
 ];
 
 /**
@@ -47,37 +72,44 @@ const CollectionScreen = () => {
   const route = useRoute();
   const symbol = useSelector(state => state.data.symbol);
   const taka = useSelector(state => state.user.currency?.taka);
+  const { wishlistIds, saveToWishlist } = useWishlistSave();
 
-  const { keyword, imgId, vendorId, title, filterByCategory = 'Default' } = route.params || {};
+  const { keyword, imgId, imageUri, vendorId, title, filterByCategory = 'Default' } = route.params || {};
+  const [researching, setResearching] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exhausted, setExhausted] = useState(false);
+  // A next page that failed even after retries; scrolling or "Try again" asks again.
+  const [loadError, setLoadError] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [columns, setColumns] = useState(2);
   const [sortBy, setSortBy] = useState('');
   const [filtersVisible, setFiltersVisible] = useState(false);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: title || keyword || 'Products' });
-  }, [navigation, title, keyword]);
-
-  /** One request for a page, dispatched by mode and memoised for 5 minutes. */
+  /**
+   * One request for a page, dispatched by mode and memoised for 5 minutes.
+   * An error answer (no `products` list) throws, so it is retried and never
+   * cached as if it were the end of the results.
+   */
   const loadPage = useCallback(
     async framePosition => {
-      if (imgId) {
-        return fetchOnce(`img:${imgId}-cat:${filterByCategory}-page:${framePosition}`, CACHE_TTL.search, () =>
-          searchByImage({ imgId, framePosition, filterByCategory }),
-        );
-      }
-      if (vendorId) {
-        return fetchOnce(`vendor:${vendorId}-cat:${filterByCategory}-page:${framePosition}`, CACHE_TTL.search, () =>
-          fetchVendorProducts({ vendorId, framePosition, filterByCategory }),
-        );
-      }
-      return fetchOnce(`search:${keyword}-cat:${filterByCategory}-page:${framePosition}`, CACHE_TTL.search, () =>
-        searchProducts({ keyword, framePosition, filterByCategory }),
+      const request = () => {
+        if (imgId) return searchByImage({ imgId, framePosition, filterByCategory });
+        if (vendorId) return fetchVendorProducts({ vendorId, framePosition, filterByCategory });
+        return searchProducts({ keyword, framePosition, filterByCategory });
+      };
+      const mode = imgId ? `img:${imgId}` : vendorId ? `vendor:${vendorId}` : `search:${keyword}`;
+      return fetchOnce(`${mode}-cat:${filterByCategory}-page:${framePosition}`, CACHE_TTL.search, () =>
+        withRetry(async () => {
+          const data = await request();
+          if (!Array.isArray(data?.products)) {
+            throw new Error(data?.message || 'The product list did not load.');
+          }
+          return data;
+        }),
       );
     },
     [keyword, imgId, vendorId, filterByCategory],
@@ -97,6 +129,8 @@ const CollectionScreen = () => {
         if (!active) return;
         const results = data?.products || [];
         setProducts(results);
+        setTotalRecords(Number(data?.totalRecords) || 0);
+        setLoadError(false);
         setExhausted(results.length === 0);
       } catch (error) {
         if (active) {
@@ -116,28 +150,41 @@ const CollectionScreen = () => {
 
   const loadMore = useCallback(async () => {
     // The web app stopped paging at 300 results; the same ceiling is kept here.
-    if (loading || loadingMore || exhausted || products.length >= DEFAULTS.maxSearchResults) {
+    if (
+      loading ||
+      loadingMore ||
+      exhausted ||
+      products.length >= DEFAULTS.maxSearchResults ||
+      (totalRecords > 0 && products.length >= totalRecords)
+    ) {
       return;
     }
 
     setLoadingMore(true);
+    setLoadError(false);
     const nextPage = page + 1;
 
     try {
       const data = await loadPage(nextPage);
       const results = data?.products || [];
+      if (Number(data?.totalRecords)) setTotalRecords(Number(data.totalRecords));
       if (results.length === 0) {
         setExhausted(true);
       } else {
-        setProducts(previous => [...previous, ...results]);
+        // Pages can overlap; keep each product once.
+        setProducts(previous => {
+          const seen = new Set(previous.map(item => `${item.num_iid || item.id}`));
+          return [...previous, ...results.filter(item => !seen.has(`${item.num_iid || item.id}`))];
+        });
         setPage(nextPage);
       }
     } catch (error) {
-      setExhausted(true);
+      // Not the end of the list — just a failed request. Leave paging open.
+      setLoadError(true);
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, exhausted, products.length, page, loadPage]);
+  }, [loading, loadingMore, exhausted, products.length, totalRecords, page, loadPage]);
 
   /** Sorting is client-side over what has loaded, as it was on the web. */
   const visibleProducts = useMemo(() => {
@@ -156,14 +203,87 @@ const CollectionScreen = () => {
       product,
     });
 
+  // The toolbar folds away while scrolling down and returns on any scroll up
+  // or near the top. `toolbarTarget` stops the animation restarting each event.
+  const toolbarProgress = useSharedValue(1);
+  const toolbarTarget = useSharedValue(1);
+  const lastScrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler(event => {
+    const y = event.contentOffset.y;
+    const delta = y - lastScrollY.value;
+    lastScrollY.value = y;
+
+    let target = toolbarTarget.value;
+    if (y < 24) target = 1;
+    else if (delta > SCROLL_INTENT) target = 0;
+    else if (delta < -SCROLL_INTENT) target = 1;
+
+    if (target !== toolbarTarget.value) {
+      toolbarTarget.value = target;
+      toolbarProgress.value = withTiming(target, { duration: 260 });
+    }
+  });
+
+  const sortLabel =
+    SORT_OPTIONS.find(option => option.value === sortBy)?.label || SORT_OPTIONS[0].label;
+
+  /** Searches again with another photo, replacing this results page. */
+  const searchNewPhoto = async () => {
+    const result = await launchImageLibrary(SEARCH_PHOTO_OPTIONS);
+    const asset = result.didCancel ? null : result.assets?.[0];
+    if (!asset) return;
+    setResearching(true);
+    try {
+      const nextId = await uploadSearchImage(asset);
+      if (!nextId) {
+        notifyError('There was an error uploading your image.');
+        return;
+      }
+      navigation.replace(ROUTES.COLLECTION, { imgId: nextId, imageUri: asset.uri, title: 'Photo search' });
+    } catch (error) {
+      notifyError(error, 'There was an error uploading your image.');
+    } finally {
+      setResearching(false);
+    }
+  };
+
+  const sellerBanner = vendorId ? (
+    <SellerBanner name={title} count={products.length} total={totalRecords} loading={loading} />
+  ) : null;
+
+  const photoBanner = imgId ? (
+    <PhotoSearchBanner
+      uri={imageUri}
+      loading={loading}
+      count={products.length}
+      searching={researching}
+      onNewPhoto={searchNewPhoto}
+    />
+  ) : null;
+
+  const header = (
+    <CollectionHeader
+      title={vendorId ? 'Seller store' : title || keyword || (imgId ? 'Photo search' : 'Products')}
+      count={products.length}
+      loading={loading}
+      columns={columns}
+      onLayoutChange={setColumns}
+      sortLabel={sortBy ? sortLabel : 'Sort'}
+      sorted={Boolean(sortBy)}
+      onOpenSort={() => setFiltersVisible(true)}
+      toolbarProgress={toolbarProgress}
+    />
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
+        {header}
+        {photoBanner}
+        {sellerBanner}
         <View style={styles.grid}>
           {Array.from({ length: 6 }).map((_, index) => (
-            <View key={index} style={styles.gridItem}>
-              <ProductCardSkeleton width={cardWidth} />
-            </View>
+            <ProductTileSkeleton key={index} index={index} width={cardWidth} />
           ))}
         </View>
       </View>
@@ -172,149 +292,134 @@ const CollectionScreen = () => {
 
   if (products.length === 0) {
     return (
-      <EmptyState
-        icon="search-outline"
-        title="No products found"
-        message={
-          imgId
-            ? 'We could not match that photo. Try a clearer picture or search by name.'
-            : `Nothing came back for "${keyword}". Try a different search.`
-        }
-        actionLabel="Back to search"
-        onAction={() => navigation.navigate(ROUTES.SEARCH)}
-      />
+      <View style={styles.container}>
+        {header}
+        {photoBanner}
+        {sellerBanner}
+        <CollectionEmpty
+          isPhotoSearch={Boolean(imgId)}
+          keyword={keyword}
+          onSearch={() => navigation.navigate(ROUTES.SEARCH)}
+          onTryKeyword={rail =>
+            navigation.push(ROUTES.COLLECTION, { keyword: rail.categoryId, title: rail.title })
+          }
+        />
+      </View>
     );
   }
 
+  const isGrid = columns > 1;
+
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
-        <Text style={styles.count}>{products.length} products</Text>
+      {header}
 
-        <View style={styles.toolbarActions}>
-          <Pressable
-            onPress={() => setColumns(columns === 2 ? 1 : 2)}
-            hitSlop={8}
-            style={styles.toolbarButton}
-            accessibilityLabel="Toggle layout">
-            <Icon
-              name={columns === 2 ? 'list-outline' : 'grid-outline'}
-              size={20}
-              color={colors.textSecondary}
-            />
-          </Pressable>
-
-          <Pressable
-            onPress={() => setFiltersVisible(true)}
-            hitSlop={8}
-            style={styles.toolbarButton}
-            accessibilityLabel="Sort and filter">
-            <Icon name="options-outline" size={20} color={colors.textSecondary} />
-          </Pressable>
-        </View>
-      </View>
-
-      <FlatList
+      <Animated.FlatList
         key={`columns-${columns}`}
         data={visibleProducts}
         numColumns={columns}
         keyExtractor={(item, index) => `${item.num_iid || item.id || index}`}
-        columnWrapperStyle={columns > 1 ? styles.column : undefined}
+        columnWrapperStyle={isGrid ? styles.column : undefined}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={photoBanner || sellerBanner}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            width={columns > 1 ? cardWidth : undefined}
-            symbol={symbol}
-            taka={taka}
-            onPress={() => openProduct(item)}
-          />
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={
+              index < ANIMATED_ITEMS
+                ? FadeInDown.delay(index * 60).springify().damping(16)
+                : undefined
+            }
+            style={isGrid ? null : styles.rowItem}>
+            <CardMotion>
+              <ProductTile
+                product={item}
+                index={index}
+                layout={isGrid ? 'grid' : 'row'}
+                width={cardWidth}
+                symbol={symbol}
+                taka={taka}
+                wishlisted={wishlistIds.has(item.id)}
+                onPress={() => openProduct(item)}
+                onWishlist={() => saveToWishlist(item)}
+              />
+            </CardMotion>
+          </Animated.View>
         )}
         ListFooterComponent={
           loadingMore ? (
-            <ActivityIndicator style={styles.footer} color={colors.primary} />
+            <View style={styles.footerPill}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.footerText}>Loading more products…</Text>
+            </View>
           ) : products.length >= DEFAULTS.maxSearchResults ? (
-            <Text style={styles.footerText}>
-              Showing the first {DEFAULTS.maxSearchResults} results — refine your search to
-              see more.
-            </Text>
-          ) : exhausted ? (
-            <Text style={styles.footerText}>That's everything.</Text>
+            <View style={styles.footerPill}>
+              <Icon name="information-circle-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.footerText}>
+                Showing the first {DEFAULTS.maxSearchResults} results — refine your search to see
+                more.
+              </Text>
+            </View>
+          ) : loadError ? (
+            <PressableScale onPress={loadMore} scaleTo={0.96} style={styles.footerPill}>
+              <Icon name="refresh" size={16} color={colors.primary} />
+              <Text style={styles.footerText}>Couldn't load more products · </Text>
+              <Text style={styles.footerRetry}>Try again</Text>
+            </PressableScale>
+          ) : exhausted || (totalRecords > 0 && products.length >= totalRecords) ? (
+            <View style={styles.footerPill}>
+              <Icon name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={styles.footerText}>That's everything</Text>
+            </View>
           ) : null
         }
       />
 
-      <BottomSheet
+      <SortSheet
         visible={filtersVisible}
+        options={SORT_OPTIONS}
+        value={sortBy}
+        onChange={setSortBy}
         onClose={() => setFiltersVisible(false)}
-        title="Sort">
-        {SORT_OPTIONS.map(option => (
-          <Pressable
-            key={option.value || 'default'}
-            onPress={() => setSortBy(option.value)}
-            style={styles.sortRow}>
-            <Text
-              style={[styles.sortLabel, sortBy === option.value && styles.sortLabelActive]}>
-              {option.label}
-            </Text>
-            {sortBy === option.value ? (
-              <Icon name="checkmark" size={20} color={colors.primary} />
-            ) : null}
-          </Pressable>
-        ))}
-        <Button
-          title="Done"
-          onPress={() => setFiltersVisible(false)}
-          style={styles.sheetButton}
-        />
-      </BottomSheet>
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundAlt },
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  count: { fontSize: typography.size.sm, color: colors.textSecondary },
-  toolbarActions: { flexDirection: 'row' },
-  toolbarButton: { marginLeft: spacing.md },
-  list: { padding: spacing.md },
+  container: { flex: 1, backgroundColor: '#f6f6f8' },
+  list: { padding: spacing.md, paddingBottom: spacing.xxl * 2 },
   column: { gap: GAP, marginBottom: GAP },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.md, gap: GAP },
-  gridItem: { marginBottom: GAP },
-  footer: { paddingVertical: spacing.lg },
-  footerText: {
-    paddingVertical: spacing.lg,
-    textAlign: 'center',
-    fontSize: typography.size.sm,
-    color: colors.textMuted,
+  rowItem: { marginBottom: GAP },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: spacing.md,
+    columnGap: GAP,
+    rowGap: GAP,
   },
-  sortRow: {
+  footerPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    alignSelf: 'center',
+    maxWidth: '100%',
+    marginTop: spacing.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    backgroundColor: colors.white,
   },
-  sortLabel: { fontSize: typography.size.md, color: colors.text },
-  sortLabelActive: {
-    color: colors.primary,
-    fontWeight: typography.weight.semiBold,
+  footerRetry: { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.primary },
+  footerText: {
+    flexShrink: 1,
+    marginLeft: 6,
+    fontSize: typography.size.xs + 1,
+    color: colors.textSecondary,
   },
-  sheetButton: { marginTop: spacing.lg },
-  radius: { borderRadius: radius.md },
 });
 
 export default CollectionScreen;

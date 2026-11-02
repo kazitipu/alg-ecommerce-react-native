@@ -6,7 +6,11 @@
  * blocks the renderer turns into headings, paragraphs and bullets; FAQ entries
  * come through as a heading (the question) followed by its answer.
  *
- * 84 content blocks across 8 pages.
+ * Paragraphs the web kept in plain <div>s (About us, Return & refunds, Tax &
+ * shipping intros) were added by hand, word for word; the web's literal
+ * markdown markers (###, **) are dropped.
+ *
+ * 99 content blocks across 8 pages.
  */
 
 export const STATIC_PAGES = {
@@ -18,12 +22,64 @@ export const STATIC_PAGES = {
         "text": "About us"
       },
       {
+        "type": "text",
+        "text": "ALG Limited Wholesale মার্কেটপ্লেসে আপনাকে স্বাগতম। চায়নায় লক্ষাধিক পণ্যের সমাহার এখন ALG Limited তে। আমাদের মার্কেটপ্লেসটি মূলত ক্ষুদ্র ও মাঝারি শ্রেণীর উদ্যোক্তা, ব্যবসায়ী, এবং ই-কমার্স ব্যবসায়ীদের জন্য। পণ্য সর্সিংয়ের মূল সমস্যা হচ্ছে চায়নায় উৎপাদনকারী প্রতিষ্ঠান খুঁজে বের করা। আমাদের এই মার্কেটপ্লেসের মাধ্যমে আপনি উৎপাদনকারী প্রতিষ্ঠান থেকে সরাসরি পণ্য ক্রয় করতে পারবেন একদম হোলসেল রেটে। আপনার পছন্দের পণ্য সোর্স করতে ALG Limited এ আজই যোগাযোগ করুন এবং আপনার ব্যবসাকে এগিয়ে নিন।"
+      },
+      {
         "type": "heading",
         "text": "Prohibited Products:"
       },
       {
-        "type": "text",
-        "text": "❌ সেক্স টয় ❌ SKD (আমদানী নিষিদ্ধ পণ্যের অংশ বিশেষ) ❌ গোল্ড ❌ সিরিঞ্জ ❌ পাকিস্তানি ক্রিম ❌ সিকিউরিটি পণ্যহাতকড়া/পিস্তল/বন্দুক বা সাদৃশ্য কোন পন্য ❌ সিগারেট ❌ মোবাইল ফোন ❌ এলকোহলজাত পানীয় ❌ ড্রোন/ ড্রোন এর পার্টস ❌ ওয়াকিটকি ❌ পুরাতন পন্য ❌ মটর সাইকেল,কার (বাচ্চাদের খেলনা হলে আনা যাবে)"
+        "type": "item",
+        "text": "❌ সেক্স টয়"
+      },
+      {
+        "type": "item",
+        "text": "❌ SKD (আমদানী নিষিদ্ধ পণ্যের অংশ বিশেষ)"
+      },
+      {
+        "type": "item",
+        "text": "❌ গোল্ড"
+      },
+      {
+        "type": "item",
+        "text": "❌ সিরিঞ্জ"
+      },
+      {
+        "type": "item",
+        "text": "❌ পাকিস্তানি ক্রিম"
+      },
+      {
+        "type": "item",
+        "text": "❌ সিকিউরিটি পণ্যহাতকড়া/পিস্তল/বন্দুক বা সাদৃশ্য কোন পন্য"
+      },
+      {
+        "type": "item",
+        "text": "❌ সিগারেট"
+      },
+      {
+        "type": "item",
+        "text": "❌ মোবাইল ফোন"
+      },
+      {
+        "type": "item",
+        "text": "❌ এলকোহলজাত পানীয়"
+      },
+      {
+        "type": "item",
+        "text": "❌ ড্রোন/ ড্রোন এর পার্টস"
+      },
+      {
+        "type": "item",
+        "text": "❌ ওয়াকিটকি"
+      },
+      {
+        "type": "item",
+        "text": "❌ পুরাতন পন্য"
+      },
+      {
+        "type": "item",
+        "text": "❌ মটর সাইকেল,কার (বাচ্চাদের খেলনা হলে আনা যাবে)"
       }
     ]
   },
@@ -165,7 +221,7 @@ export const STATIC_PAGES = {
       },
       {
         "type": "heading",
-        "text": "### Secured Payment"
+        "text": "Secured Payment"
       },
       {
         "type": "text",
@@ -211,6 +267,10 @@ export const STATIC_PAGES = {
       {
         "type": "heading",
         "text": "রিটার্ন ও রিফান্ড নীতি"
+      },
+      {
+        "type": "text",
+        "text": "আমাদের পণ্যসমূহ বিভিন্ন উপায়ে যেমন লোকাল কুরিয়ার, বিমান পরিবহন ও সমুদ্রপথে সরবরাহ করা হয়। প্রায়ই কাস্টমস ও শুল্ক অধিদপ্তর পণ্যগুলির কার্টন খুলে পরিদর্শন করে থাকে, যার ফলে কিছু পণ্য ভাঙা বা ক্ষতিগ্রস্ত হতে পারে। এই ধরনের পরিস্থিতিতে আমরা দ্রুততম সময়ের মধ্যে কাস্টমারদের অভিযোগ অত্যন্ত গুরুত্বের সঙ্গে গ্রহণ করি এবং সম্ভাব্য সেরা সমাধান প্রদান করি।"
       },
       {
         "type": "heading",
@@ -267,7 +327,7 @@ export const STATIC_PAGES = {
     "blocks": [
       {
         "type": "heading",
-        "text": "### শর্তাবলী"
+        "text": "শর্তাবলী"
       },
       {
         "type": "text",
@@ -312,7 +372,11 @@ export const STATIC_PAGES = {
     "blocks": [
       {
         "type": "heading",
-        "text": "### Custom & Shipping Charges"
+        "text": "Custom & Shipping Charges"
+      },
+      {
+        "type": "text",
+        "text": "আমরা B2B ব্যবসা করি, তাই বাণিজ্যিক উদ্দেশ্যে পণ্য আনার জন্য কাস্টমস ট্যাক্স ও চায়না থেকে বাংলাদেশে শিপিং চার্জ প্রদান করতে হবে। অর্ডার করার সময় পণ্যের মূল্য এবং শিপিং/কাস্টমস চার্জ প্রতি কেজির রেট দেখানো হবে, যা পণ্য আসার পর প্রকৃত ওজনের উপর ভিত্তি করে হিসাব করা হবে।"
       },
       {
         "type": "heading",

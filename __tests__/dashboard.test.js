@@ -1,54 +1,124 @@
 /**
- * Dashboard bucketing and payment maths.
- *
- * The four stage tabs are filters over `shipmentStatusScore`, and the amounts
- * shown decide what a customer is asked to pay — so both are pinned here.
+ * Dashboard lists and payment rules, following the website's Buy & Ship
+ * pages: each section reads its own store and splits it by `orderStatus`.
  */
 import {
   BUCKETS,
+  canPay,
+  canRefund,
   filterByBucket,
+  filterByPayment,
   getOrderTotals,
-  getSourceFor,
+  hasInvoice,
+  minimumPayment,
+  searchRecords,
+  sourceFor,
+  validatePayAmount,
 } from '../src/utils/dashboard';
-import { FLOWS } from '../src/navigation/routes';
 
-const atStage = score => ({ orderId: `o${score}`, shipmentStatusScore: score });
-const ALL_STAGES = [1, 2, 3, 4, 5, 6, 7].map(atStage);
+const withStatus = orderStatus => ({ orderId: orderStatus || 'none', orderStatus });
 
-describe('stage buckets', () => {
-  it('puts pending and approved into requests', () => {
-    const requests = filterByBucket(ALL_STAGES, BUCKETS.REQUESTS);
-    expect(requests.map(o => o.shipmentStatusScore)).toEqual([1, 2]);
+describe('sections and tabs, as on the website', () => {
+  const orders = ['pending', 'Purchased', 'Reject', 'Received in Warehouse', 'Ready for fly', 'Bangladesh customs', 'Bangladesh warehouse', 'Alg warehouse', 'Delivered'].map(withStatus);
+  const ids = list => list.map(o => o.orderStatus);
+
+  it('splits My orders into pending, purchased and rejected', () => {
+    expect(ids(filterByBucket(orders, BUCKETS.ORDERS, 'pending'))).toEqual(['pending']);
+    expect(ids(filterByBucket(orders, BUCKETS.ORDERS, 'purchased'))).toEqual(['Purchased']);
+    expect(ids(filterByBucket(orders, BUCKETS.ORDERS, 'rejected'))).toEqual(['Reject']);
   });
 
-  it('puts everything in transit into forwarding', () => {
-    // Abroad warehouse, ready to fly, customs, ALG warehouse.
-    const forwarding = filterByBucket(ALL_STAGES, BUCKETS.FORWARDING);
-    expect(forwarding.map(o => o.shipmentStatusScore)).toEqual([3, 4, 5, 6]);
+  it('splits forwarding orders into abroad and in Bangladesh', () => {
+    expect(ids(filterByBucket(orders, BUCKETS.FORWARDING, 'abroad'))).toEqual([
+      'Received in Warehouse', 'Ready for fly', 'Bangladesh customs', 'Bangladesh warehouse',
+    ]);
+    expect(ids(filterByBucket(orders, BUCKETS.FORWARDING, 'bangladesh'))).toEqual(['Alg warehouse']);
+    expect(filterByBucket(orders, BUCKETS.FORWARDING)).toHaveLength(5);
   });
 
-  it('puts only stage 7 into delivered', () => {
-    const delivered = filterByBucket(ALL_STAGES, BUCKETS.DELIVERED);
-    expect(delivered.map(o => o.shipmentStatusScore)).toEqual([7]);
+  it('lists only delivered orders under Delivered', () => {
+    expect(ids(filterByBucket(orders, BUCKETS.DELIVERED))).toEqual(['Delivered']);
   });
 
-  it('covers every stage across requests, forwarding and delivered', () => {
-    const covered = [
-      ...filterByBucket(ALL_STAGES, BUCKETS.REQUESTS),
-      ...filterByBucket(ALL_STAGES, BUCKETS.FORWARDING),
-      ...filterByBucket(ALL_STAGES, BUCKETS.DELIVERED),
-    ].map(o => o.shipmentStatusScore);
-    expect(covered.sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  it('splits product requests into pending, approved and delivered', () => {
+    const requests = ['Pending', 'Rates Provided', 'Purchased', 'Reject', 'Delivered'].map(withStatus);
+    expect(ids(filterByBucket(requests, BUCKETS.REQUESTS, 'pending'))).toEqual(['Pending']);
+    expect(ids(filterByBucket(requests, BUCKETS.REQUESTS, 'approved'))).toEqual(['Rates Provided', 'Purchased']);
+    expect(ids(filterByBucket(requests, BUCKETS.REQUESTS, 'delivered'))).toEqual(['Delivered']);
   });
 
-  it('treats a missing score as stage zero and shows nothing for it', () => {
-    expect(filterByBucket([{ orderId: 'x' }], BUCKETS.DELIVERED)).toEqual([]);
-    expect(filterByBucket([{ orderId: 'x' }], BUCKETS.FORWARDING)).toEqual([]);
+  it('reads requests from product requests and everything else from orders', () => {
+    expect(sourceFor(BUCKETS.REQUESTS)).toBe('bookings');
+    expect(sourceFor(BUCKETS.ORDERS)).toBe('ordersApi');
+    expect(sourceFor(BUCKETS.FORWARDING)).toBe('ordersApi');
+    expect(sourceFor(BUCKETS.DELIVERED)).toBe('ordersApi');
   });
 
   it('handles an empty or missing list', () => {
-    expect(filterByBucket([], BUCKETS.REQUESTS)).toEqual([]);
-    expect(filterByBucket(undefined, BUCKETS.REQUESTS)).toEqual([]);
+    expect(filterByBucket(undefined, BUCKETS.ORDERS)).toEqual([]);
+  });
+});
+
+describe('search and payment filter', () => {
+  const list = [
+    { orderId: 111, paymentStatus: 'Paid', trackingNo: 'TRK9', items: [{ productType: 'Shoes' }] },
+    { orderId: 222, paymentStatus: 'Partially Paid', orderedDate: '02/11/2026' },
+    { orderId: 333, paymentStatus: 'purchaseLater' },
+    { orderId: 444 },
+  ];
+
+  it('filters by payment status, with Not paid covering purchase-later and blank', () => {
+    expect(filterByPayment(list, 'Paid').map(o => o.orderId)).toEqual([111]);
+    expect(filterByPayment(list, 'Partially Paid').map(o => o.orderId)).toEqual([222]);
+    expect(filterByPayment(list, 'unpaid').map(o => o.orderId)).toEqual([333, 444]);
+    expect(filterByPayment(list, 'all')).toHaveLength(4);
+  });
+
+  it('searches order id, tracking no., date and product type', () => {
+    expect(searchRecords(list, '222').map(o => o.orderId)).toEqual([222]);
+    expect(searchRecords(list, 'trk9').map(o => o.orderId)).toEqual([111]);
+    expect(searchRecords(list, '02/11').map(o => o.orderId)).toEqual([222]);
+    expect(searchRecords(list, 'shoe').map(o => o.orderId)).toEqual([111]);
+    expect(searchRecords(list, '  ')).toHaveLength(4);
+  });
+});
+
+describe('pay and refund rules', () => {
+  it('offers Pay only with something due and no payment awaiting confirmation', () => {
+    expect(canPay({ orderTotal: 500 }, BUCKETS.ORDERS)).toBe(true);
+    expect(canPay({ orderTotal: 500, paymentStatus: 'pending' }, BUCKETS.ORDERS)).toBe(false);
+    expect(canPay({ orderTotal: 500, paymentStatus: 'Paid' }, BUCKETS.ORDERS)).toBe(false);
+    expect(canPay({ orderTotal: 500, payments: [{ amount: 500 }] }, BUCKETS.ORDERS)).toBe(false);
+  });
+
+  it('needs a product request to be priced (past stage 1) before it can be paid', () => {
+    expect(canPay({ orderTotal: 500, shipmentStatusScore: 1 }, BUCKETS.REQUESTS)).toBe(false);
+    expect(canPay({ orderTotal: 500, shipmentStatusScore: 2 }, BUCKETS.REQUESTS)).toBe(true);
+  });
+
+  it('offers a quick refund only on paid or partly paid records without one already', () => {
+    expect(canRefund({ paymentStatus: 'Paid' })).toBe(true);
+    expect(canRefund({ paymentStatus: 'Partially Paid' })).toBe(true);
+    expect(canRefund({ paymentStatus: 'Paid', refundStatus: 'requested' })).toBe(false);
+    expect(canRefund({ paymentStatus: 'purchaseLater' })).toBe(false);
+  });
+
+  it('asks for 100% on a first bank deposit for an order, 60% otherwise, anything after', () => {
+    expect(minimumPayment({ kind: 'order', method: 'deposit', due: 1000, paid: 0 })).toBe(1000);
+    expect(minimumPayment({ kind: 'order', method: 'bkash', due: 1000, paid: 0 })).toBe(600);
+    expect(minimumPayment({ kind: 'request', method: 'deposit', due: 1000, paid: 0 })).toBe(600);
+    expect(minimumPayment({ kind: 'order', method: 'deposit', due: 400, paid: 600 })).toBe(1);
+  });
+
+  it('checks the amount with the website messages', () => {
+    const base = { due: 1000, minimum: 600, kind: 'order', method: 'bkash' };
+    expect(validatePayAmount({ ...base, amount: 0 })).toBe("Amount to pay now can't be 0");
+    expect(validatePayAmount({ ...base, amount: 1200 })).toBe("Amount to pay now can't be more than due amount.");
+    expect(validatePayAmount({ ...base, amount: 500 })).toBe("Payable amount can't be less than 60% of the due amount");
+    expect(validatePayAmount({ ...base, amount: 700 })).toBeNull();
+    expect(validatePayAmount({ ...base, method: 'deposit', minimum: 1000, amount: 700 })).toBe(
+      "Payable amount can't be less than 100% of the due amount",
+    );
   });
 });
 
@@ -85,16 +155,17 @@ describe('order totals', () => {
   it('copes with an order that has no payments or costs yet', () => {
     expect(getOrderTotals({})).toEqual({ total: 0, paid: 0, due: 0 });
   });
+
+  it('falls back to the sku total when there is no orderTotal, as the web does', () => {
+    const order = { items: [{ skus: [{ price: '120.5', totalQuantity: 2 }] }], localShipping: 50 };
+    expect(getOrderTotals(order).total).toBe(291);
+  });
 });
 
-describe('data source per flow', () => {
-  it('reads ship-for-me from its own collection', () => {
-    expect(getSourceFor(FLOWS.SHIP_FOR_ME, BUCKETS.ORDERS)).toBe('shipForMe');
-    expect(getSourceFor(FLOWS.SHIP_FOR_ME, BUCKETS.REQUESTS)).toBe('shipForMe');
-  });
-
-  it('splits buy-and-ship between orders and requests', () => {
-    expect(getSourceFor(FLOWS.BUY_AND_SHIP, BUCKETS.ORDERS)).toBe('ordersApi');
-    expect(getSourceFor(FLOWS.BUY_AND_SHIP, BUCKETS.REQUESTS)).toBe('bookingRequest');
+describe('invoice link', () => {
+  it('shows only once the shipping charge is set, as on the web', () => {
+    expect(hasInvoice({ shippingChargeCustomer: 0 })).toBe(false);
+    expect(hasInvoice({})).toBe(false);
+    expect(hasInvoice({ shippingChargeCustomer: '450' })).toBe(true);
   });
 });

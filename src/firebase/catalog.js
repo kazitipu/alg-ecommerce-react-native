@@ -113,9 +113,3 @@ export const getSelectedIntroModal = async () => {
   return intros.length > 0 ? intros[0].imageUrl : '';
 };
 
-/**
- * Door-to-door freight rates. The collection name is built from the freight
- * type and origin country, e.g. `d2d-rates-air-china`.
- */
-export const getAllD2DRates = (freightType, country) =>
-  listCollection(`d2d-rates-${freightType}-${country}`);

@@ -162,11 +162,11 @@ export const addCartItemsToOrdersFirestore = async (
 
 /**
  * Powers the public order-tracking screen. A tracking box can be given either a
- * document id or a courier tracking number, and the record may live in any of
- * the three pipelines, so all six lookups are attempted in order.
+ * document id or a courier tracking number, and the record may live in either
+ * pipeline (orders or product requests), so all four lookups are attempted in order.
  */
 export const getOrderOrShipmentRequest = async orderId => {
-  const collections = ['ordersApi', 'shipForMe', 'bookingRequest'];
+  const collections = ['ordersApi', 'bookingRequest'];
 
   for (const name of collections) {
     const snapshot = await getDoc(doc(db, `${name}/${orderId}`));

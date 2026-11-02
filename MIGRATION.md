@@ -352,6 +352,8 @@ The line count is far below the web app's because the duplication was removed: f
 - **The `localhost:5000` bug is not reproduced.** Three of the web's four modals posted SSLCommerz there, which cannot work off a developer machine.
 
 ### ✅ Phase 13 — Buy-for-me & Ship-for-me
+
+> **Update (2026-11-02):** Ship for me was removed from the app — ALG no longer offers it, and the website no longer links to it anywhere (its `/pages/ship-for-me` route is unreachable). Removed: `ShipForMeScreen` and its parcel sheet, the freight quote helper and `d2d-rates` lookups, the `shipForMe` / `shipForMeList` data layer, actions and reducers, the dashboard's Ship for me switch, the Ship for me payment target, and its home / account shortcuts. Buy & Ship for me is unchanged. The notes below describe the original port.
 - [x] `BuyForMeScreen` — link/keyword/photo resolver plus a "how it works" explainer
 - [x] `RequestProductScreen` — sourcing request with photo upload → `bookingRequest`
 - [x] `ShipForMeScreen` — freight quote calculator (sea and air bands) + parcel list builder

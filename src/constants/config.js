@@ -33,7 +33,6 @@ export const ENDPOINTS = {
   sendOtp: phone => `${API_BASE}/api/v1/otp-sms-send/${phone}`,
   verifyOtp: phone => `${API_BASE}/api/v1/verify-otp/+88${phone}`,
 
-  bkashCreatePayment: `${API_BASE}/api/v1/bkash/create-payment`,
   // the web app points three of its four payment modals at localhost:5000 here
   sslCommerzInit: `${API_BASE}/init-sslCommerz`,
 
@@ -63,7 +62,6 @@ export const REDX = {
 export const PAYMENT_RETURN_URLS = [
   `${API_BASE}/pages/dashboard/buy-and-ship-for-me/my-orders`,
   `${API_BASE}/pages/dashboard/buy-and-ship-for-me/my-request`,
-  `${API_BASE}/pages/dashboard/ship-for-me/my-request`,
 ];
 
 /**
@@ -85,8 +83,17 @@ export const CONTACT = {
 /** Manual "Direct Deposit" details shown in the payment sheet. */
 export const BANK_DETAILS = {
   cityBankAccount: '1223250557001',
+  cityBankBranch: 'VIP Road, Dhaka',
   cityBankRouting: '225276851',
   bkashMerchant: '01881934658',
+};
+
+/**
+ * Switches for features that are built but not offered yet. Card payments are
+ * off, as on the website ("Sorry. We are currently working on it").
+ */
+export const FEATURES = {
+  cardPayments: false,
 };
 
 export const DEFAULTS = {
@@ -99,6 +106,8 @@ export const DEFAULTS = {
   maxSearchResults: 300,
   /** Card payments carry a 2.5% gateway fee, applied client-side on the web. */
   sslCommerzFeePercent: 2.5,
+  /** Delivery time the web product page promises ("around 15-20 working days"). */
+  deliveryEstimate: '15–20 days',
 };
 
 export const CACHE_TTL = {
@@ -119,5 +128,6 @@ export default {
   CONTACT,
   BANK_DETAILS,
   DEFAULTS,
+  FEATURES,
   CACHE_TTL,
 };

@@ -47,8 +47,8 @@ export const verifyOtp = async (number, otp) => {
   const snapShot = await getDoc(otpRef);
 
   if (!snapShot.exists()) {
-    notifyError('Your OTP has expired. Please try again.');
-    return { displayName: '', email: '' };
+    notifyError('Your OTP is expired.Try again.');
+    return undefined;
   }
 
   try {
@@ -75,7 +75,10 @@ export const verifyOtp = async (number, otp) => {
       await signInWithToken(data.token);
     }
 
-    if (!userRef) return undefined;
+    if (!userRef) {
+      notifyError('Could not verify that code.');
+      return undefined;
+    }
     const userObj = await getDoc(userRef);
     return userObj.data();
   } catch (error) {

@@ -28,7 +28,7 @@ const screensFor = names =>
         name={name}
         component={screen.component}
         initialParams={screen.initialParams}
-        options={{ title: screen.title }}
+        options={{ title: screen.title, ...screen.options }}
       />
     );
   });
@@ -60,24 +60,25 @@ export const CategoryStack = () => (
   </Stack.Navigator>
 );
 
+export const CART_STACK_SCREENS = [
+  ROUTES.CART,
+  ROUTES.PLACE_ORDER,
+  ROUTES.ORDER_SUCCESS,
+  ROUTES.ORDER_DETAILS,
+  ROUTES.LOGISTICS_DETAILS,
+  // Place order's "Change" / "Add address" opens the address book on top
+  // of checkout, so Back returns there with the new default address.
+  ROUTES.PROFILE_INFORMATION,
+  ...SHOPPING_SCREENS,
+];
+
 export const CartStack = () => (
-  <Stack.Navigator screenOptions={screenOptions}>
-    {screensFor([
-      ROUTES.CART,
-      ROUTES.PLACE_ORDER,
-      ROUTES.ORDER_SUCCESS,
-      ROUTES.ORDER_DETAILS,
-      ROUTES.LOGISTICS_DETAILS,
-      ...SHOPPING_SCREENS,
-    ])}
-  </Stack.Navigator>
+  <Stack.Navigator screenOptions={screenOptions}>{screensFor(CART_STACK_SCREENS)}</Stack.Navigator>
 );
 
 /**
- * The dashboard screens are shared by both freight flows. Rather than the web
- * app's two duplicated route trees — where the ship-for-me sidebar linked at
- * the buy-and-ship URLs and left its own screens unreachable — each screen is
- * registered once and takes a `flow` param.
+ * The dashboard screens, registered once, read the Buy & Ship pipeline (the
+ * `flow` param is kept for the screens that receive it).
  */
 export const OrdersStack = () => (
   <Stack.Navigator screenOptions={screenOptions}>
@@ -105,7 +106,6 @@ export const AccountStack = () => (
       ROUTES.NOTICES,
       ROUTES.NOTICE_DETAIL,
       ROUTES.TRACK_ORDER,
-      ROUTES.SHIP_FOR_ME,
       ROUTES.BUY_FOR_ME,
       ROUTES.REQUEST_PRODUCT,
       ROUTES.ABOUT_US,

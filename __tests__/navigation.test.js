@@ -57,3 +57,12 @@ describe('cart badge count', () => {
     expect(selectCartCount(undefined)).toBe(0);
   });
 });
+
+describe('checkout navigation', () => {
+  it('can open the address book from place order without leaving the Cart tab', () => {
+    const { CART_STACK_SCREENS } = require('../src/navigation/stacks');
+    expect(CART_STACK_SCREENS).toEqual(
+      expect.arrayContaining([ROUTES.PLACE_ORDER, ROUTES.PROFILE_INFORMATION, ROUTES.ORDER_SUCCESS]),
+    );
+  });
+});

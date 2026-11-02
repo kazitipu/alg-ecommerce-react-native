@@ -10,6 +10,7 @@ export const ROUTES = {
   LOGIN: 'Login', // /pages/login
   REGISTER: 'Register', // /pages/register
   FORGOT_PASSWORD: 'ForgotPassword', // /pages/forget-password
+  PHONE_LOGIN: 'PhoneLogin', // request_phone_popup on /pages/login
   OTP_VERIFY: 'OtpVerify', // OtpModal
 
   // Tabs
@@ -59,7 +60,6 @@ export const ROUTES = {
 
   // Freight services
   BUY_FOR_ME: 'BuyForMe', // /pages/buy-for-me
-  SHIP_FOR_ME: 'ShipForMe', // /pages/ship-for-me
   REQUEST_PRODUCT: 'RequestProduct', // /pages/request-for-product
 
   // Static content
@@ -80,10 +80,12 @@ export const ROUTES = {
   GALLERY: 'Gallery', // image-zoom.jsx replacement
 };
 
-/** The two freight pipelines the dashboard screens are shared between. */
+/**
+ * The freight pipeline the dashboard, tracking and invoice screens show. Ship
+ * for me used to be a second one; ALG no longer offers it (nor does the website).
+ */
 export const FLOWS = {
   BUY_AND_SHIP: 'buy-and-ship-for-me',
-  SHIP_FOR_ME: 'ship-for-me',
 };
 
 /** Screens that require a signed-in user; `useAuthGuard` enforces this. */

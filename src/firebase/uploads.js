@@ -18,8 +18,13 @@ const uploadTo = async (path, file) => {
   return getDownloadURL(fileRef);
 };
 
+/**
+ * The web names uploads after the file (`d2dExpressProduct/<name>`); a unique
+ * prefix keeps two photos with the same name (e.g. "IMG_0001.JPG") from
+ * overwriting each other.
+ */
 const fileNameOf = file =>
-  file?.fileName || file?.name || `${generateUniqueId()}.jpg`;
+  `${generateUniqueId()}-${String(file?.fileName || file?.name || 'photo.jpg').replace(/[^\w.-]/g, '_')}`;
 
 /** Bank/bKash slip attached to a payment. */
 export const uploadImage = async file =>
@@ -38,6 +43,15 @@ export const uploadImageProduct = async file => {
 export const uploadImageRechargeRequest = async file => {
   try {
     return await uploadTo(`rechargeRequests/${fileNameOf(file)}`, file);
+  } catch (error) {
+    return null;
+  }
+};
+
+/** The customer's profile photo; one file per upload so old links keep working until replaced. */
+export const uploadProfileImage = async (file, userId) => {
+  try {
+    return await uploadTo(`profileImages/${userId || 'unknown'}/${fileNameOf(file)}`, file);
   } catch (error) {
     return null;
   }
