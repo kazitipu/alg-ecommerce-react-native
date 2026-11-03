@@ -93,15 +93,35 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // The Google Play upload key. Its location and passwords come from
+        // ~/.gradle/gradle.properties (outside the repo, never committed):
+        //   ALG_UPLOAD_STORE_FILE=/Users/you/keys/alg-upload.keystore
+        //   ALG_UPLOAD_STORE_PASSWORD=...
+        //   ALG_UPLOAD_KEY_ALIAS=alg-upload
+        //   ALG_UPLOAD_KEY_PASSWORD=...
+        release {
+            if (project.hasProperty('ALG_UPLOAD_STORE_FILE')) {
+                storeFile file(ALG_UPLOAD_STORE_FILE)
+                storePassword ALG_UPLOAD_STORE_PASSWORD
+                keyAlias ALG_UPLOAD_KEY_ALIAS
+                keyPassword ALG_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Signed with the upload key when it is configured (see signingConfigs);
+            // otherwise with the debug key, which is fine for testing on a phone
+            // but is rejected by Google Play.
+            if (project.hasProperty('ALG_UPLOAD_STORE_FILE')) {
+                signingConfig signingConfigs.release
+            } else {
+                logger.warn('ALG_UPLOAD_STORE_FILE is not set: this release build is signed with the DEBUG key and cannot be uploaded to Google Play.')
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
