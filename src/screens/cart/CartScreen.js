@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
@@ -50,6 +50,8 @@ import { ROUTES } from '../../navigation/routes';
 import { colors, radius, spacing, typography } from '../../theme';
 import useCartCourierQuotes from './useCartCourierQuotes';
 import { appAlert } from '../../utils/appAlert';
+import { thumbImage } from '../../utils/imageUrl';
+import RemoteImage from '../../components/RemoteImage';
 
 const GRADIENT = ['#ff8a5c', colors.primary, '#e8344a'];
 
@@ -222,7 +224,7 @@ const SkuRow = ({ item, sku, checked, onToggle, onQuantity, symbol }) => {
   return (
     <View style={[styles.sku, checked && styles.skuOn]}>
       <Checkbox checked={checked} onPress={onToggle} label="Select this option" />
-      <Image source={{ uri: sku.image || item.picture }} style={styles.skuImage} />
+      <RemoteImage uri={thumbImage(sku.image || item.picture)} style={styles.skuImage} />
       <View style={styles.skuBody}>
         {options.length > 0 ? (
           options.map(option => (
@@ -469,7 +471,7 @@ const CartScreen = () => {
                         onPress={() => navigation.navigate(ROUTES.PRODUCT_DETAIL, { id: item.id })}
                         scaleTo={0.97}
                         style={styles.itemMain}>
-                        <Image source={{ uri: item.picture }} style={styles.itemImage} />
+                        <RemoteImage uri={thumbImage(item.picture)} style={styles.itemImage} />
                         <View style={styles.itemText}>
                           <Text style={styles.itemName} numberOfLines={2}>
                             {item.name}

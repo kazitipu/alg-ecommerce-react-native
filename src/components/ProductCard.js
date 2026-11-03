@@ -1,9 +1,11 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Skeleton from './Skeleton';
 import { formatPrice, toTaka, truncate } from '../utils/format';
 import { colors, radius, spacing, typography } from '../theme';
+import { tileImage } from '../utils/imageUrl';
+import RemoteImage from './RemoteImage';
 
 /**
  * Grid tile used by the home rails, collection grid and search results.
@@ -25,7 +27,7 @@ const ProductCard = ({ product, onPress, width, symbol, taka }) => {
       style={({ pressed }) => [styles.card, width ? { width } : null, pressed && styles.pressed]}>
       <View style={styles.imageWrap}>
         {image ? (
-          <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+          <RemoteImage uri={tileImage(image)} style={styles.image} resizeMode="cover" />
         ) : (
           <Skeleton width="100%" height="100%" borderRadius={0} />
         )}

@@ -18,6 +18,7 @@ import {
 } from '../../../utils/productDetail';
 import { colors, radius, spacing, typography } from '../../../theme';
 import { appAlert } from '../../../utils/appAlert';
+import { thumbImage } from '../../../utils/imageUrl';
 
 // The web shows the first three rows and folds the rest behind "View all".
 
@@ -45,7 +46,7 @@ const VariantRow = ({ label, image, variant, quantity, onChange, batch, taka, sy
   return (
     <View style={[styles.row, selected && styles.rowSelected]}>
       <View style={styles.rowOption}>
-        {image ? <Image source={{ uri: image }} style={styles.rowImage} /> : null}
+        {image ? <Image source={{ uri: thumbImage(image) }} style={styles.rowImage} /> : null}
         <Text style={styles.rowLabel} numberOfLines={2}>
           {label}
         </Text>
@@ -152,7 +153,7 @@ const VariantSelector = ({
         scaleTo={0.92}
         style={[styles.swatch, active && styles.swatchActive]}>
         {option.url ? (
-          <Image source={{ uri: option.url }} style={styles.swatchImage} />
+          <Image source={{ uri: thumbImage(option.url) }} style={styles.swatchImage} />
         ) : (
           <View style={styles.swatchTextWrap}>
             <Text style={styles.swatchText} numberOfLines={2}>

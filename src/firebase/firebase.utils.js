@@ -30,7 +30,7 @@ export {
   singInWithFacebook,
 } from './auth';
 
-export { createUserProfileDocument, getSingleUser, updateUser } from './users';
+export { createUserProfileDocument, getSingleUser, updateUser, updateUserFields } from './users';
 
 export {
   addCartItemTofirestore,

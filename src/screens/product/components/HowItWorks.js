@@ -33,7 +33,7 @@ const Connector = ({ delay }) => {
   const travel = useSharedValue(0);
   useEffect(() => {
     const timer = setTimeout(() => {
-      travel.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.quad) }), -1);
+      travel.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.quad) }), 3);
     }, delay);
     return () => {
       clearTimeout(timer);

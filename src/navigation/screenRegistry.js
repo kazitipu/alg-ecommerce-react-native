@@ -66,7 +66,7 @@ export const SCREENS = {
     component: CollectionScreen,
     options: { headerShown: false },
   },
-  [ROUTES.SEARCH]: { title: 'Search', component: SearchScreen },
+  [ROUTES.SEARCH]: { title: 'Search', component: SearchScreen, options: { headerShown: false } },
   // The shop listing is the same grid, driven by a vendorId param.
   [ROUTES.VENDOR_PRODUCTS]: { title: 'Shop', component: CollectionScreen, options: { headerShown: false } },
   [ROUTES.CATEGORY_LIST]: { title: 'Categories', component: CategoryListScreen, options: { headerShown: false } },

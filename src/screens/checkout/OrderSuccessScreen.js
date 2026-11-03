@@ -34,6 +34,7 @@ import { notifyInfo } from '../../utils/notify';
 import { isAwaitingPayment } from '../../utils/order';
 import { ROUTES } from '../../navigation/routes';
 import { colors, radius, spacing, typography } from '../../theme';
+import { thumbImage } from '../../utils/imageUrl';
 
 const GRADIENT = ['#ff8a5c', colors.primary, '#e8344a'];
 const SUCCESS = ['#34d399', '#059669'];
@@ -369,7 +370,7 @@ const OrderSuccessScreen = () => {
 
               <View style={styles.thumbs}>
                 {[...new Set(thumbs)].slice(0, 4).map(uri => (
-                  <Image key={uri} source={{ uri }} style={styles.thumb} />
+                  <Image key={uri} source={{ uri: thumbImage(uri) }} style={styles.thumb} />
                 ))}
                 <View style={styles.thumbText}>
                   <Text style={styles.itemName} numberOfLines={2}>

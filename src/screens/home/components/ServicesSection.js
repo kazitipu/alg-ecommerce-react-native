@@ -89,7 +89,7 @@ const ServiceCard = ({ service, index, width, onPress }) => {
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(index * 70).springify().damping(14)}
+      entering={FadeInUp.delay(index * 70).duration(360)}
       style={{ width }}>
       <Tilt index={index + 2}>
         <PressableScale onPress={onPress} scaleTo={0.93} style={styles.card}>

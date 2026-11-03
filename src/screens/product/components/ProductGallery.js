@@ -5,6 +5,8 @@ import Video, { ViewType } from 'react-native-video';
 
 import PressableScale from '../../../components/PressableScale';
 import { colors, radius, spacing, typography } from '../../../theme';
+import { largeImage, thumbImage } from '../../../utils/imageUrl';
+import RemoteImage from '../../../components/RemoteImage';
 
 const THUMB = 58;
 
@@ -99,7 +101,7 @@ const ProductGallery = ({ images, video, colorImage, onOpenGallery }) => {
           </View>
         ) : overrideImage ? (
           <Pressable onPress={() => onOpenGallery(Math.max(images.indexOf(overrideImage), 0))}>
-            <Image source={{ uri: overrideImage }} style={{ width, height: width }} resizeMode="cover" />
+            <RemoteImage uri={largeImage(overrideImage)} style={{ width, height: width }} resizeMode="cover" priority="high" />
           </Pressable>
         ) : (
           <FlatList
@@ -115,7 +117,7 @@ const ProductGallery = ({ images, video, colorImage, onOpenGallery }) => {
             }
             renderItem={({ item: uri, index: position }) => (
               <Pressable onPress={() => onOpenGallery(position)}>
-                <Image source={{ uri }} style={{ width, height: width }} resizeMode="cover" />
+                <RemoteImage uri={largeImage(uri)} style={{ width, height: width }} resizeMode="cover" priority="high" />
               </Pressable>
             )}
           />
@@ -164,7 +166,7 @@ const ProductGallery = ({ images, video, colorImage, onOpenGallery }) => {
                 scaleTo={0.92}
                 accessibilityLabel="Play product video"
                 style={[styles.thumb, showVideo && styles.thumbActive]}>
-                <Image source={{ uri: video.PreviewUrl || images[0] }} style={styles.thumbImage} />
+                <Image source={{ uri: thumbImage(video.PreviewUrl || images[0]) }} style={styles.thumbImage} />
               </PressableScale>
               <View pointerEvents="none" style={styles.thumbPlay}>
                 <View style={styles.thumbPlayIcon}>
@@ -184,7 +186,7 @@ const ProductGallery = ({ images, video, colorImage, onOpenGallery }) => {
                 !showVideo && !overrideImage && position === index && styles.thumbActive,
                 overrideImage === uri && styles.thumbActive,
               ]}>
-              <Image source={{ uri }} style={styles.thumbImage} />
+              <RemoteImage uri={thumbImage(uri)} style={styles.thumbImage} />
             </PressableScale>
           ))}
         </ScrollView>

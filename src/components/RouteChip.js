@@ -22,7 +22,8 @@ const RouteChip = ({ width = 46, style }) => {
   const flight = useSharedValue(0);
 
   useEffect(() => {
-    flight.value = withRepeat(withTiming(1, { duration: 2600, easing: Easing.linear }), -1, false);
+    // A few flights, then rest: an endless loop keeps the screen redrawing.
+    flight.value = withRepeat(withTiming(1, { duration: 2600, easing: Easing.linear }), 3, false);
     return () => cancelAnimation(flight);
   }, [flight]);
 

@@ -18,6 +18,7 @@ import { CONTACT } from '../../../constants/config';
 import { formatPrice } from '../../../utils/format';
 import { STAGES } from './orderHelpers';
 import { colors, typography } from '../../../theme';
+import { thumbImage } from '../../../utils/imageUrl';
 
 const INK = '#1f2340';
 const EASE = Easing.out(Easing.cubic);
@@ -112,7 +113,7 @@ export const ItemLine = ({ line, symbol, divided, onImage, onLink }) => (
     <PressableScale onPress={line.image ? () => onImage(line.image) : undefined} scaleTo={0.94} style={styles.thumbWrap}>
       {line.image ? (
         <>
-          <Image source={{ uri: line.image }} style={styles.thumb} />
+          <Image source={{ uri: thumbImage(line.image) }} style={styles.thumb} />
           <View style={styles.thumbZoom}>
             <Icon name="expand" size={10} color={colors.white} />
           </View>

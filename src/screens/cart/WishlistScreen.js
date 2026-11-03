@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -37,6 +36,8 @@ import {
   wishlistPrice,
 } from './wishlistUtils';
 import { colors, radius, spacing, typography } from '../../theme';
+import { tileImage } from '../../utils/imageUrl';
+import RemoteImage from '../../components/RemoteImage';
 
 const EASE = Easing.out(Easing.cubic);
 const GRADIENT = ['#ff8a5c', colors.primary, '#e8344a'];
@@ -235,11 +236,7 @@ const WishlistScreen = () => {
                 <PressableScale onPress={() => open(item)} scaleTo={0.97}>
                   <View style={styles.imageWrap}>
                     {image ? (
-                      <Image
-                        source={{ uri: image }}
-                        style={styles.image}
-                        resizeMode="cover"
-                      />
+                      <RemoteImage uri={tileImage(image)} style={styles.image} resizeMode="cover" />
                     ) : (
                       <View style={[styles.image, styles.imagePlaceholder]}>
                         <Icon

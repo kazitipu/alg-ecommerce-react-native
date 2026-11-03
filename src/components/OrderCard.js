@@ -17,6 +17,7 @@ import {
   stageOf,
 } from '../screens/dashboard/components/orderHelpers';
 import { colors, radius, typography } from '../theme';
+import { thumbImage } from '../utils/imageUrl';
 
 const GRADIENT = ['#ff8a5c', colors.primary, '#e8344a'];
 
@@ -89,7 +90,7 @@ const OrderCard = ({
             {thumbs.map((uri, index) => (
               <Image
                 key={uri}
-                source={{ uri }}
+                source={{ uri: thumbImage(uri) }}
                 style={[styles.thumb, index > 0 && styles.thumbStacked]}
               />
             ))}

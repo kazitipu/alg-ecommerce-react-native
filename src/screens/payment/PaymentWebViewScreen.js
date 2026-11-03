@@ -11,6 +11,7 @@ import PressableScale from '../../components/PressableScale';
 import ConfirmSheet from '../../components/ConfirmSheet';
 
 import { parsePaymentReturn } from '../../utils/payment';
+import { leaveToRoute } from '../../navigation/leaveModal';
 import { notifyError, notifyInfo, notifySuccess } from '../../utils/notify';
 import { colors, typography } from '../../theme';
 
@@ -68,8 +69,7 @@ const PaymentWebViewScreen = () => {
       notifyError('Payment failed. Please try again.');
     }
 
-    if (onCompleteRoute) navigation.replace(onCompleteRoute, { paymentStatus: status });
-    else navigation.goBack();
+    leaveToRoute(navigation, onCompleteRoute, { paymentStatus: status });
   };
 
   /**

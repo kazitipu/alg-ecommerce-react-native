@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import Animated, {
   useAnimatedStyle,
@@ -13,6 +13,8 @@ import Shimmer from './Shimmer';
 import { DEFAULTS } from '../constants/config';
 import { formatPrice, toTaka } from '../utils/format';
 import { colors, radius, spacing, typography } from '../theme';
+import { tileImage } from '../utils/imageUrl';
+import RemoteImage from './RemoteImage';
 
 export const TILE_WIDTH = 164;
 // Card padding (6) plus frame padding (6) on each side of the image.
@@ -122,7 +124,7 @@ const ProductTile = ({
         <View pointerEvents="none" style={styles.stitch} />
         <View style={[styles.imageWrap, { width: imageSize, height: imageSize }]}>
           {image ? (
-            <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+            <RemoteImage uri={tileImage(image)} style={styles.image} resizeMode="cover" />
           ) : (
             <Shimmer style={StyleSheet.absoluteFill} borderRadius={0} />
           )}
@@ -301,4 +303,5 @@ const styles = StyleSheet.create({
   skeletonPrice: { width: '50%', height: 17 },
 });
 
-export default ProductTile;
+// Cards only redraw when their own product or wishlist state changes.
+export default React.memo(ProductTile);

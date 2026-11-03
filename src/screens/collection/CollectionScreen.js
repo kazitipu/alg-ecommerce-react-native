@@ -324,6 +324,11 @@ const CollectionScreen = () => {
         ListHeaderComponent={photoBanner || sellerBanner}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        // Draw a screen or two ahead, not the whole list; Android skips off-screen cards.
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -331,7 +336,7 @@ const CollectionScreen = () => {
           <Animated.View
             entering={
               index < ANIMATED_ITEMS
-                ? FadeInDown.delay(index * 60).springify().damping(16)
+                ? FadeInDown.delay(index * 50).duration(320)
                 : undefined
             }
             style={isGrid ? null : styles.rowItem}>

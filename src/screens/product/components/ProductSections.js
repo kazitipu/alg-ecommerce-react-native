@@ -17,6 +17,7 @@ import PressableScale from '../../../components/PressableScale';
 import { formatPrice } from '../../../utils/format';
 import { getOptionValue, PRODUCT_TEXT } from '../../../utils/productDetail';
 import { colors, radius, typography } from '../../../theme';
+import { thumbImage } from '../../../utils/imageUrl';
 
 /** Five stars, half-filled where the rating falls between two. */
 export const Stars = ({ rating, size = 13 }) => (
@@ -68,7 +69,7 @@ export const StatsRow = ({ rating, totalSold, available }) => {
 const Shine = () => {
   const x = useSharedValue(-1);
   useEffect(() => {
-    x.value = withRepeat(withSequence(withTiming(-1, { duration: 2400 }), withTiming(1.4, { duration: 900 })), -1);
+    x.value = withRepeat(withSequence(withTiming(-1, { duration: 2400 }), withTiming(1.4, { duration: 900 })), 3);
   }, [x]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * 320 }, { rotate: '18deg' }] }));
   return <Animated.View pointerEvents="none" style={[styles.shine, style]} />;
@@ -176,7 +177,7 @@ export const VariantPreview = ({ mode, colors: colorOptions, selectedColor, quan
   const pulse = useSharedValue(1);
   useEffect(() => {
     if (totalQuantity > 0) return;
-    pulse.value = withRepeat(withSequence(withTiming(1.06, { duration: 700 }), withTiming(1, { duration: 700 })), -1);
+    pulse.value = withRepeat(withSequence(withTiming(1.06, { duration: 700 }), withTiming(1, { duration: 700 })), 4);
   }, [pulse, totalQuantity]);
   const chevronStyle = useAnimatedStyle(() => ({ transform: [{ scale: totalQuantity > 0 ? 1 : pulse.value }] }));
 
@@ -215,7 +216,7 @@ export const VariantPreview = ({ mode, colors: colorOptions, selectedColor, quan
           {shown.map((option, index) => (
             <Animated.View key={option.properties} entering={FadeInRight.delay(index * 50)} style={styles.previewSwatch}>
               {option.url ? (
-                <Image source={{ uri: option.url }} style={styles.previewSwatchImage} />
+                <Image source={{ uri: thumbImage(option.url) }} style={styles.previewSwatchImage} />
               ) : (
                 <Text style={styles.previewSwatchText} numberOfLines={2}>
                   {getOptionValue(option)}

@@ -136,6 +136,10 @@ const HomeScreen = () => {
         data={sections}
         keyExtractor={item => item.key || item.categoryId || item.title}
         ListHeaderComponent={listHeader}
+        // Rails below the fold mount as they come near, not all at start.
+        initialNumToRender={3}
+        maxToRenderPerBatch={2}
+        windowSize={5}
         renderItem={({ item }) =>
           item === SERVICES_SECTION ? (
             <ServicesSection variant={4} />

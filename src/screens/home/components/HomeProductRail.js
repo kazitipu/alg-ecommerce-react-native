@@ -100,8 +100,10 @@ const HomeProductRail = ({ title, categoryId, isHomeCategory }) => {
           onScroll={onScroll}
           scrollEventThrottle={16}
           contentContainerStyle={styles.list}
-          initialNumToRender={4}
+          initialNumToRender={3}
+          maxToRenderPerBatch={4}
           windowSize={5}
+          removeClippedSubviews
           keyExtractor={(item, index) => `${item.num_iid || item.id || index}`}
           ListFooterComponent={<ViewAllCard onPress={viewAll} />}
           ListFooterComponentStyle={styles.footer}
@@ -109,7 +111,7 @@ const HomeProductRail = ({ title, categoryId, isHomeCategory }) => {
             <Animated.View
               entering={
                 index < ANIMATED_ITEMS
-                  ? FadeInRight.delay(index * 70).springify().damping(16)
+                  ? FadeInRight.delay(index * 70).duration(360)
                   : undefined
               }
               style={styles.cell}>

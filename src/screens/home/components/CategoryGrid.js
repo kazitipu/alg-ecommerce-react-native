@@ -24,7 +24,7 @@ const CONTENT_WIDTH = SIDE_PADDING * 2 + PER_ROW * CARD_WIDTH + (PER_ROW - 1) * 
 
 const ParcelCard = ({ category, index, onSelect }) => (
   <Animated.View
-    entering={FadeInDown.delay(index * 55).springify().damping(13)}
+    entering={FadeInDown.delay(index * 55).duration(360)}
     style={styles.slot}>
     <Tilt index={index} motion="float">
       <PressableScale onPress={() => onSelect(category)} scaleTo={0.93} style={styles.card}>

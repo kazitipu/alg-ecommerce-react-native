@@ -117,7 +117,7 @@ const CampaignSection = ({ campaigns, onSelect }) => {
         contentContainerStyle={styles.list}
         keyExtractor={(item, index) => item.id || item.name || String(index)}
         renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInRight.delay(index * 90).springify().damping(16)}>
+          <Animated.View entering={FadeInRight.delay(index * 90).duration(360)}>
             <CampaignCard
               campaign={item}
               now={now}

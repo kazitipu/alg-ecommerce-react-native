@@ -102,6 +102,14 @@ export const getSingleUser = async id => {
   }
 };
 
+/**
+ * Updates only `fields` on users/{id}. Unlike `updateUser` it throws on
+ * failure, so callers that update the screen first can undo the change.
+ */
+export const updateUserFields = async (id, fields) => {
+  await updateDoc(doc(db, `users/${id}`), fields);
+};
+
 export const updateUser = async user => {
   try {
     await updateDoc(doc(db, `users/${user.id}`), { ...user });

@@ -36,7 +36,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { setCurrentUser, updateProfilePhotoRedux } from '../../actions';
 import UserAvatar from '../../components/UserAvatar';
 import ConfirmSheet from '../../components/ConfirmSheet';
-import { getSingleUser, updateUser, uploadProfileImage } from '../../firebase/firebase.utils';
+import { getSingleUser, updateUser, updateUserFields, uploadProfileImage } from '../../firebase/firebase.utils';
 import { useAuth, useDarkStatusBar } from '../../hooks';
 import { generateBookingId } from '../../utils/ids';
 import { isValidBdMobile } from '../../utils/otp';
@@ -432,17 +432,25 @@ const ProfileInformationScreen = () => {
     }
   };
 
+  /**
+   * Saves the address book. The screen (and checkout) update at once; only the
+   * address list is written, in the background — Firestore only resolves a
+   * write once its server confirms it, and waiting for that plus a full
+   * re-download of the user made the page hang on a slow connection. A failed
+   * save puts the old list back.
+   */
   const writeBook = async (nextBook, id) => {
+    const previous = addressBook;
     setBusyId(id);
+    dispatch(setCurrentUser({ ...currentUser, addressBook: nextBook }));
+    setBusyId(null);
     try {
-      await updateUser({ ...currentUser, addressBook: nextBook });
-      await refreshUser();
+      await updateUserFields(currentUser.id, { addressBook: nextBook });
       return true;
     } catch (error) {
+      dispatch(setCurrentUser({ ...currentUser, addressBook: previous }));
       notifyError(error, 'Could not update your addresses.');
       return false;
-    } finally {
-      setBusyId(null);
     }
   };
 
@@ -473,15 +481,12 @@ const ProfileInformationScreen = () => {
         address: draft.address.trim(),
         id: draft.id || generateBookingId(),
       };
-      await updateUser({
-        ...currentUser,
-        addressBook: withSavedAddress(addressBook, entry),
-      });
-      await refreshUser();
+      const nextBook = withSavedAddress(addressBook, entry);
+      // Shown straight away; the write finishes in the background (see writeBook).
       setSheet({ visible: false, address: null });
-      notifySuccess('Address saved');
-      // Like the web, a new address added from checkout takes you back there.
       if (pickMode && !draft.id) navigation.goBack();
+      const ok = await writeBook(nextBook, entry.id);
+      if (ok) notifySuccess('Address saved');
     } catch (error) {
       notifyError(error, 'Could not save the address.');
     } finally {
@@ -505,6 +510,8 @@ const ProfileInformationScreen = () => {
   /** From place order: deliver to this address and go back to checkout. */
   const chooseAddress = async address => {
     if (busyId) return;
+    // Back to checkout at once; the new default is already in place there.
+    navigation.goBack();
     if (!address.defaultShipping) {
       const ok = await writeBook(
         addressBook.map(item => ({
@@ -514,10 +521,8 @@ const ProfileInformationScreen = () => {
         })),
         address.id,
       );
-      if (!ok) return;
-      notifySuccess('Delivery address updated');
+      if (ok) notifySuccess('Delivery address updated');
     }
-    navigation.goBack();
   };
 
   // In checkout a new address is meant for this order, so it starts as the default.

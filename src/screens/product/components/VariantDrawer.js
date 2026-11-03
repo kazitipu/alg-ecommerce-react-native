@@ -21,6 +21,7 @@ import { formatPrice } from '../../../utils/format';
 import { getOptionValue, isFreeLocalShipping, localShippingLabel } from '../../../utils/productDetail';
 import FreeBadge from '../../../components/FreeBadge';
 import { colors, radius, spacing, typography } from '../../../theme';
+import { thumbImage } from '../../../utils/imageUrl';
 
 const OPEN_SPRING = { damping: 20, stiffness: 190, mass: 0.9 };
 // Dragged further than this (or flicked down) closes the drawer.
@@ -129,7 +130,7 @@ const VariantDrawer = ({
               <View style={styles.handle} />
               <View style={styles.header}>
                 <Animated.View key={image} entering={FadeInDown.duration(250)} style={styles.thumbWrap}>
-                  {image ? <Image source={{ uri: image }} style={styles.thumb} /> : null}
+                  {image ? <Image source={{ uri: thumbImage(image) }} style={styles.thumb} /> : null}
                 </Animated.View>
                 <View style={styles.headerText}>
                   <Text style={styles.price}>{priceLabel}</Text>

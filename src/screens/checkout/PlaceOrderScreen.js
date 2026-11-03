@@ -38,6 +38,7 @@ import { notifyError, notifySuccess } from '../../utils/notify';
 import { ROUTES } from '../../navigation/routes';
 import { colors, radius, spacing, typography } from '../../theme';
 import { appAlert } from '../../utils/appAlert';
+import { thumbImage } from '../../utils/imageUrl';
 
 /** RedX pickup warehouse, hardcoded on the web too. */
 const PICKUP_AREA_ID = 288;
@@ -196,20 +197,22 @@ const PlaceOrderScreen = () => {
 
     setQuotingDelivery(true);
     const charges = {};
-    for (const shop of pendingOrders) {
-      try {
-        const data = await calculateDeliveryCharge({
-          deliveryAreaId: defaultShipping.areaObj.id,
-          pickupAreaId: PICKUP_AREA_ID,
-          cashCollectionAmount: COD_ESTIMATE,
-          weight: parseInt((Number(shop.items?.[0]?.weight) || 0) * 1000, 10),
-        });
-        charges[shop.shopId] =
-          parseInt(data.deliveryCharge, 10) + parseInt(data.codCharge, 10);
-      } catch (error) {
-        // A failed quote falls back to the flat rate rather than blocking checkout.
-      }
-    }
+    // All sellers at once — one after another made checkout lag after an address change.
+    await Promise.all(
+      pendingOrders.map(async shop => {
+        try {
+          const data = await calculateDeliveryCharge({
+            deliveryAreaId: defaultShipping.areaObj.id,
+            pickupAreaId: PICKUP_AREA_ID,
+            cashCollectionAmount: COD_ESTIMATE,
+            weight: parseInt((Number(shop.items?.[0]?.weight) || 0) * 1000, 10),
+          });
+          charges[shop.shopId] = parseInt(data.deliveryCharge, 10) + parseInt(data.codCharge, 10);
+        } catch (error) {
+          // A failed quote falls back to the flat rate rather than blocking checkout.
+        }
+      }),
+    );
     setDeliveryCharges(charges);
     setQuotingDelivery(false);
   }, [defaultShipping, pendingOrders]);
@@ -452,7 +455,7 @@ const PlaceOrderScreen = () => {
               return (
                 <React.Fragment key={item.id}>
                 <View style={styles.item}>
-                  <Image source={{ uri: item.picture || item.skus?.[0]?.image }} style={styles.itemImage} />
+                  <Image source={{ uri: thumbImage(item.picture || item.skus?.[0]?.image) }} style={styles.itemImage} />
                   <View style={styles.itemText}>
                     <Text style={styles.itemName} numberOfLines={2}>
                       {item.name}
@@ -478,7 +481,7 @@ const PlaceOrderScreen = () => {
                   <View style={styles.skuList}>
                     {lines.map(line => (
                       <View key={line.key} style={styles.skuLine}>
-                        {line.image ? <Image source={{ uri: line.image }} style={styles.skuThumb} /> : null}
+                        {line.image ? <Image source={{ uri: thumbImage(line.image) }} style={styles.skuThumb} /> : null}
                         <View style={styles.skuInfo}>
                           <Text style={styles.skuOptions} numberOfLines={2}>
                             {line.variants.length

@@ -2,6 +2,7 @@ import axios from 'axios';
 
 import client from './client';
 import { ENDPOINTS, LEGACY_PRODUCT_API } from '../constants/config';
+import { fetchOnce, withRetry } from '../utils/cache';
 
 /**
  * Product sourcing. These endpoints proxy 1688/Taobao, so responses come back
@@ -43,11 +44,33 @@ export const fetchCategory = async params => {
 };
 
 /** China-side freight estimate for a chosen set of SKUs. */
-export const fetchShipping = async ({ productId, totalQuantity, skus }) => {
-  const { data } = await client.get('/api/products/shipping', {
-    params: { productId, totalQuantity, skus: JSON.stringify(skus) },
-  });
-  return data;
+/** How long a courier quote is reused for the same product, quantity and options. */
+export const SHIPPING_QUOTE_TTL = 10 * 60 * 1000;
+
+/**
+ * The quote comes from 1688 through ALG's server, and 1688 rate-limits it
+ * ("APP call frequency limit", usually as an HTTP 500). A single attempt
+ * therefore failed at random — showing "included later" for one quantity and
+ * a price for the next. Failures are retried with growing pauses, and good
+ * quotes are cached so stepping the quantity back and forth asks nothing new.
+ */
+export const fetchShipping = ({ productId, totalQuantity, skus }) => {
+  const skusParam = JSON.stringify(skus);
+  return fetchOnce(`shipping:${productId}:${totalQuantity}:${skusParam}`, SHIPPING_QUOTE_TTL, () =>
+    withRetry(
+      async () => {
+        const { data } = await client.get('/api/products/shipping', {
+          params: { productId, totalQuantity, skus: skusParam },
+        });
+        // A rate-limit body can also arrive with a 200; treat it as a failure.
+        if (!data?.shippingCost && (data?.error || data?.error_code || data?.message)) {
+          throw new Error(data?.message || 'The courier quote did not load.');
+        }
+        return data;
+      },
+      { retries: 3, delayMs: 1200 },
+    ),
+  );
 };
 
 /**

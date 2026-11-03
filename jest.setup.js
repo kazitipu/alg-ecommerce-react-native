@@ -166,3 +166,12 @@ jest.mock('react-native-blob-util', () => ({
     config: jest.fn(() => ({ fetch: jest.fn().mockResolvedValue({}) })),
   },
 }));
+
+jest.mock('react-native-fast-image', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const FastImage = props => React.createElement(View, props);
+  FastImage.resizeMode = { cover: 'cover', contain: 'contain', stretch: 'stretch', center: 'center' };
+  FastImage.priority = { low: 'low', normal: 'normal', high: 'high' };
+  return { __esModule: true, default: FastImage };
+});

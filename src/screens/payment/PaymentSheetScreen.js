@@ -27,8 +27,10 @@ import { formatPrice } from '../../utils/format';
 import { notifyError, notifyInfo, notifySuccess } from '../../utils/notify';
 import { BANK_DETAILS, DEFAULTS, FEATURES } from '../../constants/config';
 import { ROUTES } from '../../navigation/routes';
+import { leaveToRoute } from '../../navigation/leaveModal';
 import { asText, orderThumbs } from '../dashboard/components/orderHelpers';
 import { colors, radius, spacing, typography } from '../../theme';
+import { thumbImage } from '../../utils/imageUrl';
 
 const GRADIENT = ['#ff8a5c', colors.primary, '#e8344a'];
 
@@ -161,8 +163,7 @@ const PaymentSheetScreen = () => {
         });
         if (!stored) return;
         notifySuccess('Payment submitted', 'Our team member will confirm it soon.');
-        if (returnRoute) navigation.replace(returnRoute);
-        else navigation.goBack();
+        leaveToRoute(navigation, returnRoute);
         return;
       }
 
@@ -178,12 +179,12 @@ const PaymentSheetScreen = () => {
           if (stored) dispatch({ type: 'UPDATE_BOOKINGS_OF_SINGLE_USER', payload: stored });
         } else {
           stored = await uploadPaymentRequestApi2(paymentObj);
-          if (stored) dispatch(updateSingleOrderApiRedux(orders[0]));
+          // Mirror what was saved, so the order shows "awaiting confirmation" and no Pay button.
+          if (stored) dispatch(updateSingleOrderApiRedux({ ...orders[0], paymentStatus: 'pending' }));
         }
         if (!stored) return;
         notifySuccess('Payment submitted', 'Our team member will confirm it soon.');
-        if (returnRoute) navigation.replace(returnRoute);
-        else navigation.goBack();
+        leaveToRoute(navigation, returnRoute);
         return;
       }
 
@@ -219,8 +220,7 @@ const PaymentSheetScreen = () => {
         'Payment submitted',
         'Our team will verify your transfer shortly.',
       );
-      if (returnRoute) navigation.replace(returnRoute);
-      else navigation.goBack();
+      leaveToRoute(navigation, returnRoute);
     } catch (error) {
       notifyError(error, 'Could not submit your payment.');
     } finally {
@@ -378,7 +378,7 @@ const PaymentSheetScreen = () => {
             {payingFor.map(row => (
               <View key={row.key} style={styles.coverRow}>
                 {row.thumb ? (
-                  <Image source={{ uri: row.thumb }} style={styles.coverThumb} />
+                  <Image source={{ uri: thumbImage(row.thumb) }} style={styles.coverThumb} />
                 ) : (
                   <View style={[styles.coverThumb, styles.coverThumbEmpty]}>
                     <Icon name="cube-outline" size={16} color={colors.textMuted} />

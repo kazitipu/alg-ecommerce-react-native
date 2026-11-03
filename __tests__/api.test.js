@@ -29,3 +29,27 @@ describe('photo search upload', () => {
     expect(client.post).not.toHaveBeenCalled();
   });
 });
+
+describe('China local courier quote', () => {
+   
+  const { fetchShipping } = require('../src/api/products');
+
+  beforeEach(() => client.get.mockReset());
+
+  it('retries a rate-limited quote and caches the good answer', async () => {
+    jest.useFakeTimers();
+    client.get
+      .mockRejectedValueOnce(Object.assign(new Error('Request failed with status code 500'), { response: { status: 500 } }))
+      .mockResolvedValueOnce({ data: { shippingCost: { freight: '5', freePostage: false } } });
+
+    const pending = fetchShipping({ productId: 77, totalQuantity: 3, skus: [] });
+    await jest.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({ shippingCost: { freight: '5', freePostage: false } });
+    expect(client.get).toHaveBeenCalledTimes(2);
+
+    // Same product, quantity and options: answered from the cache.
+    await expect(fetchShipping({ productId: 77, totalQuantity: 3, skus: [] })).resolves.toBeTruthy();
+    expect(client.get).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
+  });
+});
