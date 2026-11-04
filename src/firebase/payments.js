@@ -125,8 +125,13 @@ export const uploadPaymentRequestApi = async paymentObj =>
       'ordersApi',
       payload.pendingOrders,
       'orderId',
+      // Only the payment fields: writing back the whole order copy from the
+      // app would overwrite anything the admin changed since it loaded.
       (shop, stored) => ({
-        ...shop,
+        paymentStatus: shop.paymentStatus || 'pending',
+        payNowPercent: shop.payNowPercent ?? stored.payNowPercent ?? '',
+        actualTotal: shop.actualTotal ?? stored.actualTotal ?? 0,
+        offer: shop.offer ?? payload.offer,
         orderTotal:
           stored.orderTotal -
           stored.orderTotal * (parseFloat(payload.offer.split('%')[0]) / 100),
