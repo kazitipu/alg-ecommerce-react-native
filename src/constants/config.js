@@ -85,7 +85,7 @@ export const BANK_DETAILS = {
   cityBankAccount: '1223250557001',
   cityBankBranch: 'VIP Road, Dhaka',
   cityBankRouting: '225276851',
-  bkashMerchant: '01881934658',
+  bkashMerchant: '01823234803',
 };
 
 /**
