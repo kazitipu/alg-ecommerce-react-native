@@ -27,7 +27,9 @@ export const removeItemFromCart = async (userAuth, item) => {
 
   const cartRef = doc(db, `carts/${userAuth.id}`);
   const snapShot = await getDoc(cartRef);
-  if (!snapShot.exists()) return undefined;
+  // The result becomes the Redux cart, which must stay an array. Buy Now
+  // accounts that have never added to cart have no document here.
+  if (!snapShot.exists()) return [];
 
   const firestoreCart = snapShot.data().cart;
   const selectedSkuIds = item.skus.map(sku => sku.sku_id);

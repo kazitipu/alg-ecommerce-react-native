@@ -23,37 +23,58 @@ const docsToArray = snapshot => {
 const byNewest = (a, b) => b.time - a.time;
 
 /**
+ * Firestore rejects a document holding `undefined` anywhere in it, and orders
+ * are built straight from the product API, where fields are often absent. Only
+ * plain objects and arrays are walked, so Timestamps survive.
+ */
+const stripUndefined = value => {
+  if (Array.isArray(value)) {
+    return value.filter(entry => entry !== undefined).map(entry => stripUndefined(entry));
+  }
+  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.keys(value).reduce((clean, key) => {
+      if (value[key] !== undefined) clean[key] = stripUndefined(value[key]);
+      return clean;
+    }, {});
+  }
+  return value;
+};
+
+/**
  * Creates one `ordersApi/{orderId}` document per shop in the basket.
  *
  * An id collision means the caller generated a duplicate order number, so the
  * write is refused rather than silently overwriting a real order.
+ *
+ * Returns the orders actually saved. A failure partway still reports the ones
+ * before it, so the caller does not treat them as unsaved and write them again.
  */
 export const addToOrdersApi = async (userAuth, orders) => {
   if (!userAuth?.id) return undefined;
 
   const created = [];
   for (const shop of orders) {
-    const orderRef = doc(db, `ordersApi/${shop.orderId}`);
-    const snapShot = await getDoc(orderRef);
-
-    if (snapShot.exists()) {
-      notifyError('This order ID was already added. Please try again.');
-      continue;
-    }
-
     try {
-      await setDoc(orderRef, {
+      const orderRef = doc(db, `ordersApi/${shop.orderId}`);
+      const snapShot = await getDoc(orderRef);
+
+      if (snapShot.exists()) {
+        notifyError('This order ID was already added. Please try again.');
+        continue;
+      }
+
+      const orderDoc = stripUndefined({
         ...shop,
         userId: userAuth.id,
-        displayName: userAuth.displayName,
+        displayName: userAuth.displayName || '',
         uid: userAuth.userId,
         month: getMonthName(),
       });
-      const stored = await getDoc(orderRef);
-      created.push(stored.data());
+      await setDoc(orderRef, orderDoc);
+      created.push(orderDoc);
     } catch (error) {
       console.warn('error creating orders', error.message);
-      return undefined;
+      break;
     }
   }
 

@@ -283,24 +283,30 @@ const PlaceOrderScreen = () => {
         return;
       }
 
-      for (const shop of placed) {
-        for (const item of shop.items || []) {
-          await dispatch(
-            removeItemFromCartRedux(currentUser, {
-              id: item.id,
-              skus: (item.skus || []).map(sku => ({
-                sku_id: orderSkuKey(item, sku),
-              })),
-            }),
-          );
+      // The orders are saved, so a problem tidying up must not report the
+      // placement as failed, or the customer retries and orders twice.
+      try {
+        for (const shop of placed) {
+          for (const item of shop.items || []) {
+            await dispatch(
+              removeItemFromCartRedux(currentUser, {
+                id: item.id,
+                skus: (item.skus || []).map(sku => ({
+                  sku_id: orderSkuKey(item, sku),
+                })),
+              }),
+            );
+          }
         }
-      }
 
-      if (coupon) {
-        await updateUser({
-          ...currentUser,
-          usedCoupons: withCouponUsage(currentUser, coupon),
-        });
+        if (coupon) {
+          await updateUser({
+            ...currentUser,
+            usedCoupons: withCouponUsage(currentUser, coupon),
+          });
+        }
+      } catch (cleanupError) {
+        console.warn('error after placing order', cleanupError.message);
       }
 
       // A partial save is charged for what was saved.
