@@ -4,7 +4,6 @@
  */
 import { STATIC_PAGES } from '../src/constants/staticPages';
 import { DIVISIONS, DISTRICTS_BY_DIVISION, districtsOf } from '../src/constants/bdAddress';
-import { allThanas } from '../src/constants/thana';
 
 const EXPECTED = {
   ABOUT_US: 16,
@@ -78,11 +77,6 @@ describe('Bangladesh address data', () => {
     expect(districtsOf(undefined)).toEqual([]);
   });
 
-  it('ships thana lists that match district names', () => {
-    const dhaka = allThanas.find(entry => entry.name === 'Dhaka');
-    expect(dhaka.thana.length).toBeGreaterThan(10);
-    expect(dhaka.thana).toContain('DHANMONDI');
-  });
 });
 
 describe('content the web kept outside <p> tags', () => {

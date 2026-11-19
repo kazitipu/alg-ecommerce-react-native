@@ -85,7 +85,7 @@ Also `https://globalbuybd.com/singleProduct/{id},1688|taobao` and RedX `https://
 | `window.open` / `<a target="_blank">` (21 files) | `Linking.openURL` or in-app WebView |
 | `localStorage` (5 files) | AsyncStorage / redux-persist |
 | icofont + Font Awesome CDN | `@react-native-vector-icons/*` v13 (scoped packages) |
-| @bangladeshi/bangladesh-address | data-only port → `src/constants/thana.js` |
+| @bangladeshi/bangladesh-address | data-only port → `src/constants/bdAddress.js` |
 | `<canvas>` video thumbnails | `react-native-create-thumbnail` |
 
 **3. Do NOT port this dead code** (confirmed unrouted or unrendered in the web app):
@@ -397,13 +397,13 @@ The line count is far below the web app's because the duplication was removed: f
 
 ### ✅ Phase 17 — Profile, notices, tracking, static
 - [x] `AccountScreen` — the hub replacing the web header dropdown and footer columns
-- [x] `ProfileInformationScreen` — profile fields + address book (division → district → thana → RedX area)
+- [x] `ProfileInformationScreen` — profile fields + address book (division → district → RedX area, stored as `thana` like the web)
 - [x] `ProfileSecurityScreen` — password change with reauthentication; phone-only accounts told why they have none
 - [x] `NoticesScreen` / `NoticeDetailScreen`
 - [x] `TrackOrderScreen` — public lookup across all three pipelines
 - [x] `StaticPageScreen` — one renderer for all 8 policy/help pages
 - [x] `src/constants/staticPages.js` — **84 content blocks** extracted verbatim (Bengali policy text)
-- [x] `src/constants/bdAddress.js` (8 divisions, 64 districts) + `thana.js`
+- [x] `src/constants/bdAddress.js` (8 divisions, 64 districts)
 - [x] Verified: `eslint` clean · 157 tests pass
 
 **Test guarding this phase:** `__tests__/staticPages.test.js` asserts every page's block count, that no JSX artefacts (`<`, `className`, `{"`) leaked into the text, and that the Bengali privacy wording is intact.

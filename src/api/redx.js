@@ -21,10 +21,26 @@ export const trackParcel = async courierTrackingId => {
   return data;
 };
 
+/**
+ * RedX spells some districts differently from our district list; without this
+ * mapping (copied from the website) those districts return no areas.
+ */
+const REDX_DISTRICT_NAMES = {
+  Narsingdi: 'Norshingdi',
+  Jhalokati: 'Jhalokathi',
+  Pirojpur: 'Perojpur',
+  Chattogram: 'Chittagong',
+  Lakshmipur: 'Laksmipur',
+  Sirajgonj: 'Sirajganj',
+  Maulvibazar: 'Moulvibazar',
+};
+
+export const toRedxDistrict = districtName => REDX_DISTRICT_NAMES[districtName] || districtName;
+
 /** Delivery areas within a district; the address form needs an area's id. */
 export const fetchAreas = async districtName => {
   const { data } = await redxClient.get('/areas', {
-    params: { district_name: districtName },
+    params: { district_name: toRedxDistrict(districtName) },
   });
   return data?.areas || [];
 };

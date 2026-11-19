@@ -22,7 +22,6 @@ import AuthField from '../../auth/components/AuthField';
 import PressableScale from '../../../components/PressableScale';
 import { fetchAreas } from '../../../api';
 import { DIVISIONS, districtsOf } from '../../../constants/bdAddress';
-import { allThanas } from '../../../constants/thana';
 import { colors, spacing, typography } from '../../../theme';
 
 const GRADIENT = ['#ff8a5c', colors.primary, '#e8344a'];
@@ -56,12 +55,15 @@ export const toDraft = address => {
   };
 };
 
-/** The four location levels, each unlocked by the one before. */
+/**
+ * The three location levels, each unlocked by the one before — the same as the
+ * website. There is no separate thana picker: like the web, the chosen RedX
+ * area's name is stored as `thana` alongside the full `areaObj`.
+ */
 const LEVELS = [
   { key: 'division', label: 'Division', icon: 'map' },
   { key: 'district', label: 'District', icon: 'business' },
-  { key: 'thana', label: 'Thana', icon: 'navigate' },
-  { key: 'area', label: 'Delivery area', icon: 'location' },
+  { key: 'area', label: 'Area', icon: 'location' },
 ];
 
 /** One location row: step number (or tick), label, chosen value, chevron. */
@@ -150,7 +152,7 @@ const OptionPicker = ({ level, options, selected, loading, onPick, onBack }) => 
 
 /**
  * Add / edit an address. Checkout quotes delivery from RedX by the area's id,
- * so division → district → thana → area must all be picked, the area from
+ * so division → district → area must all be picked, the area from
  * RedX's own list for that district.
  */
 const AddressSheet = ({ visible, initial, canUnsetDefault, saving, onClose, onSave }) => {
@@ -185,12 +187,12 @@ const AddressSheet = ({ visible, initial, canUnsetDefault, saving, onClose, onSa
   }, [draft.district]);
 
   const districts = useMemo(() => districtsOf(draft.division), [draft.division]);
-  const thanas = useMemo(() => allThanas.find(entry => entry.name === draft.district)?.thana || [], [draft.district]);
 
   const update = key => value => setDraft(previous => ({ ...previous, [key]: value }));
 
-  const optionsFor = key =>
-    key === 'division' ? DIVISIONS : key === 'district' ? districts : key === 'thana' ? thanas : areas.map(area => area.name);
+  const areaNames = useMemo(() => areas.map(area => area.name).sort((a, b) => a.localeCompare(b)), [areas]);
+
+  const optionsFor = key => (key === 'division' ? DIVISIONS : key === 'district' ? districts : areaNames);
 
   const valueFor = key => (key === 'area' ? draft.areaObj?.name : draft[key]);
 
@@ -198,8 +200,8 @@ const AddressSheet = ({ visible, initial, canUnsetDefault, saving, onClose, onSa
     setDraft(previous => {
       if (key === 'division') return { ...previous, division: value, district: '', thana: '', areaObj: null };
       if (key === 'district') return { ...previous, district: value, thana: '', areaObj: null };
-      if (key === 'thana') return { ...previous, thana: value };
-      return { ...previous, areaObj: areas.find(area => area.name === value) || null };
+      const areaObj = areas.find(area => area.name === value) || null;
+      return { ...previous, thana: areaObj ? areaObj.name : '', areaObj };
     });
     setPicking(null);
   };
@@ -272,10 +274,10 @@ const AddressSheet = ({ visible, initial, canUnsetDefault, saving, onClose, onSa
 
                     <View style={styles.locHeader}>
                       <Text style={styles.section}>Location</Text>
-                      <Text style={styles.locProgress}>{completed}/4</Text>
+                      <Text style={styles.locProgress}>{completed}/{LEVELS.length}</Text>
                     </View>
                     <View style={styles.locBar}>
-                      <Animated.View style={[styles.locBarFill, { width: `${(completed / 4) * 100}%` }]} />
+                      <Animated.View style={[styles.locBarFill, { width: `${(completed / LEVELS.length) * 100}%` }]} />
                     </View>
                     {LEVELS.map((level, index) => (
                       <LocationRow

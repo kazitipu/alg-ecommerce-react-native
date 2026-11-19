@@ -469,8 +469,8 @@ const ProfileInformationScreen = () => {
       notifyError('Enter an 11-digit mobile number starting with 0.');
       return;
     }
-    if (!draft.division || !draft.district || !draft.thana || !draft.areaObj) {
-      notifyError('Please choose division, district, thana and delivery area.');
+    if (!draft.division || !draft.district || !draft.areaObj) {
+      notifyError('Please choose division, district and area.');
       return;
     }
     setSavingAddress(true);
