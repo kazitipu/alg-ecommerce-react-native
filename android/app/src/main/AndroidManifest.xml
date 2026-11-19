@@ -3,6 +3,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
+      react-native-blob-util adds ACCESS_WIFI_STATE, which Google Play reads as
+      requiring Wi-Fi hardware and hides the app from devices without it. The
+      app works over any connection, so Wi-Fi is declared optional.
+    -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
+    <!--
       Required from API 33. Without it the OS silently drops every notification,
       so order-status pushes would never appear on Android 13+.
     -->
